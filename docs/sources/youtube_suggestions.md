@@ -1,5 +1,7 @@
 # YouTube suggestions
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs/sources/youtube_suggestions)
+
 Expand query ideas using autocomplete. Each item of the outer `results` array is a list of suggestion strings, rather than an object with a `suggestions` property.
 
 ## Example

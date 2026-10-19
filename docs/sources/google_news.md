@@ -1,5 +1,7 @@
 # Google news
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs/sources/google_news)
+
 Track coverage with headline `title`, publisher `source`, `link`, and `date`. Dates may be relative strings; retain the request timestamp when recording them.
 
 ## Example

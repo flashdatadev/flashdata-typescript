@@ -1,5 +1,7 @@
 # Runnable TypeScript and JavaScript examples
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 Run `npm ci` and `npm run build` from the checkout. Each live example passes
 `apiKey: process.env.FLASHDATA_API_KEY` explicitly. Set that environment variable before
 execution. `--help` needs no key and makes no request. Imports never start paid work.

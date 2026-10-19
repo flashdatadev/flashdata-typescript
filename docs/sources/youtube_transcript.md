@@ -1,5 +1,7 @@
 # YouTube transcripts
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs/sources/youtube_transcript)
+
 Read an existing automatic caption track by default. Output includes `segments` with second-based `start` and `end`, `fullText`, and track metadata. This endpoint does not transcribe missing tracks.
 
 ## Example

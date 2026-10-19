@@ -1,5 +1,7 @@
 # Errors and recovery
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 All SDK exceptions inherit from `FlashDataError` and expose a meaningful `name`.
 
 | Exception                | Meaning and next step                                                         |

@@ -1,5 +1,7 @@
 # Account, pricing and service discovery
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 Read current access and plan limits before scaling. These endpoints are free but rate
 limited. Credit balances and plan ceilings are shared by account keys; usage is scoped
 to the API key making the request.

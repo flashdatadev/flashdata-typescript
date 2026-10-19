@@ -7,6 +7,12 @@ export async function main(argv = process.argv.slice(2)) {
     'wait-timeout-ms': { type: 'string', default: '300000' },
   });
   if (!args) return;
+  const timeoutMs = integerOption(
+    args.values['wait-timeout-ms'],
+    '--wait-timeout-ms',
+    1,
+    2147483647,
+  );
   const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
   let id = args.values['job-id'];
   if (!id) {
@@ -19,7 +25,7 @@ export async function main(argv = process.argv.slice(2)) {
     await saveJSON(receipt, args.values.output);
   }
   await client.jobs.wait(id, {
-    timeoutMs: integerOption(args.values['wait-timeout-ms'], '--wait-timeout-ms', 1, 2147483647),
+    timeoutMs,
     pollIntervalMs: 3000,
   });
   const response = await client.jobs.result(id);

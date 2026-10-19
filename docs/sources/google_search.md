@@ -1,5 +1,7 @@
 # Google web search
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs/sources/google_search)
+
 Build retrieval inputs or monitor search listings. Each organic hit may include `title`, `link`, `snippet`, and `position`.
 
 ## Example

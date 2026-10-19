@@ -1,5 +1,7 @@
 # Bulk datasets and cloud media downloads
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 Bulk applies one source and shared options to a UTF-8 file containing one 11-character
 YouTube video ID per line (1 byte to 2 GiB). It supports metadata, transcripts, captions,
 license labels, and downloads. Search/channel/suggestions use individual queries or batch.

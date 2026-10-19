@@ -1,0 +1,22 @@
+name: Bug report
+description: Report an SDK issue with a reproducible example
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: SDK version, Node.js version, TypeScript version if applicable, and operating system
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Minimal code, expected behavior, and actual behavior. Remove keys, storage credentials, signed URLs, and private data.
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: Error details
+      description: Exception type, HTTP status, API code, and request ID if available

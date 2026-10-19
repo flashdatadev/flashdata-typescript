@@ -28,6 +28,8 @@ export async function main(argv = process.argv.slice(2)) {
             message: error.message,
             statusCode: error.statusCode,
             code: error.code,
+            requestId: error.requestId,
+            retryAfter: error.retryAfter,
           },
         };
       }

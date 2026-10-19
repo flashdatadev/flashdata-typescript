@@ -1,5 +1,7 @@
 # FlashData TypeScript & JavaScript SDK
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 Google search results and YouTube data for Node.js applications, search monitoring,
 research pipelines, and retrieval workflows.
 
@@ -7,6 +9,18 @@ Get web, news, shopping, image, video, and local search results; discover YouTub
 read metadata and existing caption tracks; run background and batch queries; and process
 video ID files in bulk. Includes typed requests and responses, input validation, structured
 errors, bounded pagination, cancellation, and ESM/CommonJS support. Requires Node.js 22+.
+
+## What is FlashData?
+
+[FlashData](https://flashdata.dev) provides APIs for Google search results, YouTube data,
+and cloud media delivery. Developers and data teams use these APIs for search monitoring,
+research, analytics, content discovery, and retrieval workflows for AI applications.
+
+Retrieve web, news, shopping, image, video, and local search results; discover YouTube
+videos and read metadata, existing caption tracks, channel data, and license labels.
+Use realtime requests, background jobs, mixed batches, or bulk video ID files to fit your
+workload. Media downloads deliver audio or video into your own cloud storage.
+See the [API documentation](https://flashdata.dev/docs) and [pricing](https://flashdata.dev/pricing).
 
 ## Install
 
@@ -230,6 +244,9 @@ npm run examples:typescript -- coffee
 
 Live examples consume credits. `node examples/offline.mjs` demonstrates a mock query
 with no account or network. All scripts support `--help` and do no network work on import.
+
+The [SDK comparison](docs/sdk-parity.md) maps Python and TypeScript coverage, language
+differences, workflow guarantees, and verification limits side by side.
 
 ## Development
 

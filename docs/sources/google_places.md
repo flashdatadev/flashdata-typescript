@@ -1,5 +1,7 @@
 # Google places
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs/sources/google_places)
+
 Discover local businesses using `title`, `address`, `category`, `rating`, and optional coordinates. Website and location fields may be absent.
 
 ## Example

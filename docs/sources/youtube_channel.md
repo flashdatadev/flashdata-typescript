@@ -1,5 +1,7 @@
 # YouTube channels
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs/sources/youtube_channel)
+
 Read channel identity, description, subscriber/view counts, and a bounded `videos` list. Pass a handle such as `@freecodecamp`, and set `video_limit` to control the number of recent entries.
 
 ## Example

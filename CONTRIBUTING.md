@@ -1,5 +1,7 @@
 # Contributing
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 Use Node.js 22+ and a branch for changes. Keep keys, storage credentials, signed URLs
 and private results out of source, commits, logs and public issues.
 

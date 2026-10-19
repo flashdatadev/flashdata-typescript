@@ -25,6 +25,12 @@ async function typeCoverage() {
     { source: 'youtube_metadata', video_id: 'dQw4w9WgXcQ' },
   ]);
   for (const item of batch.queries) await client.jobs.wait(item.id);
+  const jobResult = await client.jobs.result(receipt.id);
+  const completedAt: string = jobResult.completed_at;
+  const possibleCredits: number | undefined = jobResult.usage?.credits;
+  // @ts-expect-error background results have no guaranteed created_at
+  const created: string = jobResult.created_at;
+  void [completedAt, possibleCredits, created];
   const storage = {
     storage_type: 's3' as const,
     storage_url: 'bucket',
@@ -37,6 +43,7 @@ async function typeCoverage() {
     source: 'youtube_metadata',
     options: { include_formats: false, result_storage: storage },
   });
+  await client.bulk.create({ source: 'youtube_metadata', options: { result_storage: null } });
   // @ts-expect-error downloads require a storage destination
   void client.youtube.download({ video_id: 'dQw4w9WgXcQ' });
   // @ts-expect-error downloads are background only

@@ -1,5 +1,7 @@
 # Getting started
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 ## Install from source
 
 Use Node.js 22 or newer. In this repository, install dependencies and build:

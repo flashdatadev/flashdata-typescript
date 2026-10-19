@@ -1,5 +1,7 @@
 # YouTube extended search
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs/sources/youtube_search_extended)
+
 Collect a larger discovery set in one request. Request 1–700 entities with `max_results`; fewer may be available. Use an explicit bound for predictable workloads.
 
 ## Example

@@ -1,5 +1,7 @@
 # YouTube cloud downloads
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs/sources/youtube_download)
+
 Deliver audio or video to your cloud storage. Individual and batch downloads run in the background. Pass destination credentials through `storage`; output media is not returned as a local file.
 
 ## Example

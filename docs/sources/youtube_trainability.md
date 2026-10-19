@@ -1,5 +1,7 @@
 # YouTube license labels
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs/sources/youtube_trainability)
+
 Inspect the API’s `permitted` labels for a video. The source name is `youtube_trainability`, but these labels report detected license information; they do not grant model-training or media-reuse permission.
 
 ## Example

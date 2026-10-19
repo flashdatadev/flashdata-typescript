@@ -1,5 +1,7 @@
 # Bounded Google pagination
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 Each fetched page is a separate paid query, including an empty last page. `google.pages`
 requires an explicit budget, yields responses lazily, and stops after an empty hit list.
 Breaking iteration prevents future page submissions.

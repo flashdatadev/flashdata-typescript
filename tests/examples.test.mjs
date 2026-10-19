@@ -254,9 +254,57 @@ function assertExplicitKey(code, label) {
   }
   visit(source);
 }
+for (const script of ['bulk.mjs', 'bulk_download.mjs', 'async_query.mjs'])
+  test(`${script} rejects invalid wait options before sending work`, () =>
+    sandbox(async (directory, environment) => {
+      const result = spawnSync(
+        process.execPath,
+        [
+          '--import',
+          mock,
+          join(root, 'examples', script),
+          'video-ids.txt',
+          '--wait-timeout-ms',
+          '0',
+        ],
+        {
+          cwd: directory,
+          env: { ...environment, FLASHDATA_TEST_NO_NETWORK: '1' },
+          encoding: 'utf8',
+        },
+      );
+      assert.equal(result.status, 1);
+      assert(result.stderr.includes('--wait-timeout-ms must be an integer'));
+    }));
+
+test('concurrent searches export successes and structured errors before failing', () =>
+  sandbox(async (directory, environment) => {
+    const output = join(directory, 'partial.json');
+    const result = spawnSync(
+      process.execPath,
+      [
+        '--import',
+        mock,
+        join(root, 'examples/concurrent_search.mjs'),
+        'coffee',
+        'flashdata_test_failure',
+        'tea',
+        '--output',
+        output,
+      ],
+      { cwd: directory, env: environment, encoding: 'utf8' },
+    );
+    assert.equal(result.status, 1);
+    const rows = JSON.parse(await readFile(output, 'utf8'));
+    assert(rows[0].response && rows[2].response);
+    assert.equal(rows[1].error.requestId, 'request-1');
+    assert.equal(rows[1].error.statusCode, 429);
+  }));
+
 test('all documentation links and source parameters are covered', async () => {
   for (const page of pages) {
     const text = await readFile(page, 'utf8');
+    assert(text.includes('[FlashData](https://flashdata.dev)'), page);
     for (const match of text.matchAll(/\]\(([^)]+)\)/g)) {
       const target = match[1];
       if (/^[a-z]+:/.test(target) || target.startsWith('#')) continue;

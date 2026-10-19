@@ -1,5 +1,7 @@
 # YouTube metadata
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs/sources/youtube_metadata)
+
 Enrich video IDs with title, channel, duration, upload date, counts, and available transcript languages. Disable formats and chapters when they are unnecessary to reduce payload size.
 
 ## Example

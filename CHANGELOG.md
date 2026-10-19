@@ -1,5 +1,11 @@
 # Changelog
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
+Cross-SDK review: corrected stored background result types, allowed nullable data-result
+storage, validated CLI waiting arguments before submission, preserved structured partial
+failures, documented Python/TypeScript parity, and linked every guide to official FlashData pages.
+
 ## 0.1.0 — local release candidate
 
 - All 15 Google and YouTube sources, source validation and typed requests.

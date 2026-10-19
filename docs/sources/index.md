@@ -1,5 +1,7 @@
 # Source guides
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 Choose a task. Each guide includes source-specific response fields, complete parameter coverage, and a runnable example.
 
 | Task                    | Source                                                | CLI                                                |

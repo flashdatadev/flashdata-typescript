@@ -1,5 +1,7 @@
 # Google videos
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs/sources/google_videos)
+
 Find video pages from across the web. Entries may include `title`, `link`, `videoUrl`, `duration`, `channel`, and `source`; `link` and `videoUrl` can differ.
 
 ## Example

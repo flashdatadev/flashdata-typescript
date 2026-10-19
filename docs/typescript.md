@@ -1,5 +1,7 @@
 # TypeScript, ESM and CommonJS
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 All request/response types and errors are exported from `@flashdata-dev/sdk`. Use
 TypeScript 5.9 with `moduleResolution: "NodeNext"` for Node applications, or the matching
 bundler resolution in an application using a bundler. Use `.mts`/`type: "module"` for ESM

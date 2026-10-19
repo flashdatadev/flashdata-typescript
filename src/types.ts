@@ -412,7 +412,7 @@ export type BulkDataOptions = {
   include_chapters?: boolean;
   language?: string;
   auto?: boolean;
-  result_storage?: StorageConfig;
+  result_storage?: StorageConfig | null;
 };
 export type CreateBulkJobRequest =
   | { source: 'youtube_download'; options: YoutubeDownloadParams; callback_url?: string | null }
@@ -1530,10 +1530,16 @@ export interface BatchResponse {
   total_credits: number;
   usage: { credits: number };
 }
-export interface JobResult extends DataQueryResponse {
+export interface JobResult {
   id: string;
+  source: Source;
+  status: 'completed';
+  results: unknown[];
+  /** Data results report credits; media delivery receipts may omit usage. */
+  usage?: { credits?: number; [key: string]: unknown };
   completed_at: string;
   expires_at: string;
+  [key: string]: unknown;
 }
 export interface BulkResultRow {
   index: number;

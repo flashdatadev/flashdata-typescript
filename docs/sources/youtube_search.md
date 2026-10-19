@@ -1,5 +1,7 @@
 # YouTube search
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs/sources/youtube_search)
+
 Discover videos or other entity types. Search payloads contain a nested `results` list plus `query` and `totalResults`. Video entries have `videoId`, `title`, `channel`, and optional duration/views.
 
 ## Example

@@ -1,5 +1,7 @@
 # Security
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 Report suspected vulnerabilities privately to support@flashdata.dev. Include the SDK version,
 runtime version and a minimal reproduction with fabricated credentials. Do not attach real
 API keys, storage credentials, signed URLs or private result data to public issues.

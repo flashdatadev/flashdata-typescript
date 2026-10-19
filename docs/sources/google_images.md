@@ -1,5 +1,7 @@
 # Google images
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs/sources/google_images)
+
 Discover visual assets and their source pages. `imageUrl` is the image resource, `thumbnailUrl` is the preview, and `link` is the source page. These URLs do not grant reuse rights.
 
 ## Example

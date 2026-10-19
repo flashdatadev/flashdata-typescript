@@ -1,5 +1,7 @@
 # FlashData TypeScript & JavaScript SDK
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 Build Node.js applications with Google search and YouTube data using typed requests,
 ordinary response objects, background jobs, and bulk ID files. Start with
 [installation](getting-started.md) or choose a [source guide](sources/index.md).
@@ -21,3 +23,6 @@ ordinary response objects, background jobs, and bulk ID files. Start with
 
 The generated TypeDoc site includes these guides and the exported client, resource,
 request/response types, and exception reference. Build it with `npm run docs:build`.
+
+See the [Python and TypeScript comparison](sdk-parity.md) for shared API coverage,
+bulk recovery guarantees and intentional language differences.

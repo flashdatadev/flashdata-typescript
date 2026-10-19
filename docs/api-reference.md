@@ -1,5 +1,7 @@
 # API reference and endpoint coverage
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 The generated TypeDoc site documents the exported `FlashData` client, resources, request
 options, wire types and errors. Use `npm run docs:build`, then open `docs/_build/index.html`.
 This page maps the public API surface to resource methods. JSON keys retain wire names;

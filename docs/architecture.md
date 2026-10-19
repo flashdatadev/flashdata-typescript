@@ -1,5 +1,7 @@
 # SDK architecture
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 `FlashData` delegates to query, Google, YouTube, account, jobs, bulk, and public resources.
 Source helpers construct typed wire objects and call `queries`. Source validation uses
 checked-in JSON Schemas without injecting billing defaults. The service is authoritative

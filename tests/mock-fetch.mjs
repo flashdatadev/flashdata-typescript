@@ -7,7 +7,7 @@ const fixtures = JSON.parse(
 const jobs = new Map();
 const bulkId = 'bulk_example123';
 const origin = 'https://results.example';
-const json = (value) => Response.json(value);
+const json = (value, status = 200) => Response.json(value, { status });
 globalThis.fetch = async (input, init = {}) => {
   if (process.env.FLASHDATA_TEST_NO_NETWORK === '1')
     throw new Error('Network work occurred during help/import.');
@@ -37,7 +37,9 @@ globalThis.fetch = async (input, init = {}) => {
     const id = path.split('/').at(-1);
     const source = jobs.get(id) ?? 'google_search';
     return json({
-      ...fixtures[source].response,
+      source,
+      results: fixtures[source].response.results ?? [],
+      ...(source === 'youtube_download' ? {} : { usage: fixtures[source].response.usage }),
       id,
       status: 'completed',
       completed_at: '2026-10-20T00:00:00Z',
@@ -48,6 +50,8 @@ globalThis.fetch = async (input, init = {}) => {
     throw new Error('Unexpected external origin.');
   if (path.startsWith('/v1/')) {
     const query = JSON.parse(init.body);
+    if (query.query === 'flashdata_test_failure')
+      return json({ message: 'Limited', code: 'limited', requestId: 'request-1' }, 429);
     if (path.endsWith('/realtime')) return json(fixtures[query.source].response);
     if (path.endsWith('/batch'))
       return json({

@@ -4,6 +4,12 @@ import { mkdir, open, stat } from 'node:fs/promises';
 import { integerOption, saveJSON } from './_support.mjs';
 
 export async function bulkTask(client, args, request) {
+  const timeoutMs = integerOption(
+    args.values['wait-timeout-ms'],
+    '--wait-timeout-ms',
+    1,
+    2147483647,
+  );
   const output = args.values.output ?? 'artifacts/dataset.ndjson';
   let id = args.values['bulk-id'];
   if (!id) {
@@ -20,7 +26,7 @@ export async function bulkTask(client, args, request) {
     await client.bulk.start(id);
   }
   const completed = await client.bulk.wait(id, {
-    timeoutMs: integerOption(args.values['wait-timeout-ms'], '--wait-timeout-ms', 1, 2147483647),
+    timeoutMs,
     pollIntervalMs: 3000,
   });
   await saveJSON(completed, output + '.job.json');

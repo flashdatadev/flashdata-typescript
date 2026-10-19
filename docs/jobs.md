@@ -1,6 +1,12 @@
 # Background jobs and mixed batches
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 ## Submit, save, wait, retrieve
+
+Stored background results have `id`, `source`, `status`, `results`, `completed_at`, and
+`expires_at`. Data results also include `usage`; media delivery receipts may omit it.
+Unlike realtime responses, stored results do not include a guaranteed `created_at`.
 
 ```javascript
 import { FlashData } from '@flashdata-dev/sdk';

@@ -1,5 +1,7 @@
 # Release preparation
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 This project stays local until the official FlashData GitHub and npm accounts are ready.
 The planned package name is `@flashdata-dev/sdk`; verify ownership before publishing.
 

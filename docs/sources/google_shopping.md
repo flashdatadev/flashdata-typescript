@@ -1,5 +1,7 @@
 # Google shopping
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs/sources/google_shopping)
+
 Compare listings by `title`, merchant `source`, `price`, and `link`. Prices are display strings and can have different currencies; normalize deliberately for numeric analysis.
 
 ## Example

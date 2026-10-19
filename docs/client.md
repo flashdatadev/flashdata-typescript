@@ -1,5 +1,7 @@
 # Client configuration, timeouts and cancellation
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
 ## Configure API keys explicitly
 
 ```javascript

@@ -1,5 +1,12 @@
 # SDK review and validation — 2026-10-20
 
+[FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
+
+The [Python and TypeScript comparison](sdk-parity.md) records the latest cross-SDK
+alignment, matching endpoints, workflow recovery and official-link checks. Offline
+evidence below was refreshed after alignment; paid live evidence comes from the earlier
+individual review and was not rerun during the comparison.
+
 This review compared the TypeScript implementation with FlashData's current backend,
 the source catalogue, live API responses, the reviewed Python SDK, and
 [SerpApi's Python SDK at commit 827ebf4](https://github.com/serpapi/serpapi-python/tree/827ebf4886d36dd7b40f294f6857dd2471ac7667).
@@ -31,7 +38,7 @@ SerpApi-specific engines, markdown conversion and archive APIs are not FlashData
 
 Validated locally on Windows with Node.js 24.19.0 and TypeScript 5.9.3:
 
-- **191 offline checks passed**, with 19 live checks skipped by default. Coverage includes
+- **195 offline checks passed**, with 19 live checks skipped by default. Coverage includes
   all 15 source contracts, bulk controls, native fetch against two loopback origins,
   streamed input upload, signed result isolation, bounded decoding, cancellation and recovery.
 - **33 documentation code blocks execute** against source-shaped fixtures. TypeScript
