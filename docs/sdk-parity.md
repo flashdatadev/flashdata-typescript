@@ -81,12 +81,12 @@ coverage, code execution and recovery. See [the example catalogue](../examples/R
 
 ## Verification and release boundary
 
-The 2026-10-20 alignment checks passed locally on Windows with Python 3.12.14 and Node.js
-24.19.0:
+The 2026-10-20 alignment and final release checks passed locally on Windows with
+Python 3.10.22/3.12.14 and Node.js 22.0.0/24.19.0:
 
 | Verification                    | Python                                                                              | TypeScript                                                              |
 | ------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Offline tests                   | 307 passed; live checks skipped by default                                          | 200 passed; live checks skipped by default                              |
+| Offline tests                   | 317 passed; live checks skipped by default                                          | 200 passed; live checks skipped by default                              |
 | Executable documentation blocks | 40 Python blocks                                                                    | 38 JavaScript/TypeScript blocks; typed blocks also compile              |
 | Runnable examples               | 25, including discovery and bulk downloads                                          | 27, including typed and CommonJS examples                               |
 | Formatting and types            | Ruff and mypy pass                                                                  | Prettier and strict TypeScript pass                                     |

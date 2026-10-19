@@ -2,6 +2,9 @@
 
 [FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
 
+See [final release checks](release.md) for the minimum/current runtime matrix, clean
+consumer installs, package metadata checks, and fixes from the final review.
+
 The [Python and TypeScript comparison](sdk-parity.md) records the latest cross-SDK
 alignment, matching endpoints, workflow recovery and official-link checks. Offline
 evidence below was refreshed after alignment; paid live evidence comes from the earlier
@@ -36,7 +39,7 @@ SerpApi-specific engines, markdown conversion and archive APIs are not FlashData
 
 ## Verification
 
-Validated locally on Windows with Node.js 24.19.0 and TypeScript 5.9.3:
+Validated locally on Windows with Node.js 22.0.0/24.19.0 and TypeScript 5.9.3:
 
 - **200 offline checks passed**, with 19 live checks skipped by default. Coverage includes
   all 15 source contracts, bulk controls, native fetch against two loopback origins,

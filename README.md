@@ -45,9 +45,19 @@ npm install /absolute/path/to/flashdata-dev-sdk-0.1.0.tgz
 This version is available from source. npm registry installation instructions will be
 added after release under FlashData's official account. Run the SDK on your server.
 
+For a TypeScript application, also install the compiler and Node.js types as development
+dependencies; the SDK includes its own API types:
+
+```sh
+npm install --save-dev typescript@~5.9.3 @types/node@^22
+```
+
 Obtain a key from your [FlashData account](https://flashdata.dev) and pass it through
 `apiKey`. Examples read it using `process.env.FLASHDATA_API_KEY`; a key supplied by your
 secret manager works too.
+
+The SDK does not automatically load `.env` files. Load application configuration before
+reading `process.env` if you use them.
 
 ```sh
 # macOS / Linux

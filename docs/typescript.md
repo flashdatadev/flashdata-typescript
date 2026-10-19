@@ -8,6 +8,17 @@ bundler resolution in an application using a bundler. Use `.mts`/`type: "module"
 and `.cts`/`.cjs` for CommonJS. The package provides runtime and declaration entry points
 for both module systems.
 
+In a consuming TypeScript application, install the compiler and Node.js types locally:
+
+```sh
+npm install --save-dev typescript@~5.9.3 @types/node@^22
+```
+
+These are application development dependencies. The SDK ships its own API declarations;
+it does not install the TypeScript compiler or Node.js typings into consuming projects.
+The package check uses the consumer's compiler/types with only the `ES2022` library,
+so it does not depend on the SDK checkout's typings or browser DOM libraries.
+
 ```typescript
 import {
   FlashData,

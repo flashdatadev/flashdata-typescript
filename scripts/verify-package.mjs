@@ -28,6 +28,9 @@ const packed = JSON.parse(
     artifacts,
   ]),
 )[0];
+const project = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
+assert.equal(packed.name, project.name);
+assert.equal(packed.version, project.version);
 assert(packed.files.some((file) => file.path === 'dist/index.d.cts'));
 assert(packed.files.some((file) => file.path === 'README.zh-CN.md'));
 assert(packed.files.some((file) => file.path === 'examples/bulk_download.mjs'));
@@ -58,6 +61,21 @@ try {
     ],
     consumer,
   );
+  const development = project.devDependencies;
+  run(
+    process.execPath,
+    [
+      npm,
+      'install',
+      '--save-dev',
+      '--ignore-scripts',
+      '--no-audit',
+      '--no-fund',
+      `typescript@${development.typescript}`,
+      `@types/node@${development['@types/node']}`,
+    ],
+    consumer,
+  );
   const types = `import {FlashData,type CreateBulkJobRequest} from '@flashdata-dev/sdk';
 const client=new FlashData({apiKey:process.env.FLASHDATA_API_KEY});
 const request:CreateBulkJobRequest={source:'youtube_download',options:{storage:{storage_type:'s3',storage_url:'bucket'}}};
@@ -69,7 +87,7 @@ void request;void check;
   run(
     process.execPath,
     [
-      join(root, 'node_modules/typescript/bin/tsc'),
+      join(consumer, 'node_modules/typescript/bin/tsc'),
       '--strict',
       '--noEmit',
       '--skipLibCheck',
@@ -80,11 +98,11 @@ void request;void check;
       'NodeNext',
       '--target',
       'ES2022',
+      '--lib',
+      'ES2022',
       '--esModuleInterop',
       '--types',
       'node',
-      '--typeRoots',
-      join(root, 'node_modules/@types'),
       'consumer.mts',
       'consumer.cts',
     ],

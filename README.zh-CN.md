@@ -42,6 +42,12 @@ npm install /absolute/path/to/flashdata-dev-sdk-0.1.0.tgz
 当前版本通过源码安装。正式使用 FlashData 官方账号发布后，会补充 npm 注册表安装说明。
 请在服务端运行 SDK。
 
+TypeScript 应用还需将编译器和 Node.js 类型定义安装为开发依赖。SDK 自身的 API 类型已随包提供：
+
+```sh
+npm install --save-dev typescript@~5.9.3 @types/node@^22
+```
+
 从你的 [FlashData 账户](https://flashdata.dev)获取 API 密钥，并通过 `apiKey` 显式传入。
 示例使用 `process.env.FLASHDATA_API_KEY` 读取环境变量，也可以使用密钥管理服务提供的值。
 SDK 不会自动加载 `.env` 文件，如需使用，请先由应用加载配置。

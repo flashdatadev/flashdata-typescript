@@ -2,6 +2,10 @@
 
 [FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
 
+Final local release check: verified Node 22.0.0/24, documented consumer TypeScript/Node
+type dependencies in English and Chinese, and tested clean ESM/CommonJS consumers with
+their own compiler/types and without DOM libraries or SDK checkout type roots.
+
 Cross-SDK review: corrected stored background result types, allowed nullable data-result
 storage, validated CLI waiting arguments before submission, preserved structured partial
 failures, documented Python/TypeScript parity, and linked every guide to official FlashData pages.

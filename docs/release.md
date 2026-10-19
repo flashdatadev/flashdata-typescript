@@ -2,6 +2,40 @@
 
 [FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
 
+## Final local release check — 2026-10-20
+
+The 0.1.0 release candidate passes the local release checks below. English `README.md`
+remains the default, with a visible 简体中文 link to the complete Chinese README.
+
+| Check                        | Result                                                                                          |
+| ---------------------------- | ----------------------------------------------------------------------------------------------- |
+| Supported runtimes exercised | Windows: exact minimum Node 22.0.0 and Node 24.19.0                                             |
+| Offline tests                | 200 passed on each runtime; 19 live checks deliberately skipped                                 |
+| Documentation examples       | All 38 JavaScript/TypeScript blocks execute, including five Chinese README examples             |
+| Example CLIs                 | All 27 checked for import safety, help, outputs and applicable recovery flows                   |
+| Formatting and typing        | Prettier and strict TypeScript pass                                                             |
+| Generated documentation      | TypeDoc builds with warnings treated as errors on both runtimes                                 |
+| Clean dependency install     | `npm ci` passes; npm reported zero advisories                                                   |
+| Packages                     | Independent ESM/CommonJS runtime and strict `.mts`/`.cts` consumers pass on both runtimes       |
+| Consumer isolation           | Compiler and Node typings installed inside the consumer; no checkout type roots or DOM library  |
+| Package contents             | Both READMEs, declarations, source maps, guides and examples included; metadata version checked |
+| Documentation navigation     | Exact-case relative links pass; 18 distinct official URLs return HTTP 200                       |
+| API parity                   | Both SDKs agree on 24 operations, 15 sources and 46 resource methods                            |
+| Credential checks            | Package contents and Git history have no FlashData-key-shaped matches                           |
+
+This check replaced the consumer's borrowed typings with its own compiler and Node types,
+and documented that setup in English and Chinese. The Python counterpart now rejects API
+key control characters before transport creation, gates all live tests explicitly, and
+checks runtime/distribution version agreement and both packaged README contents.
+
+No paid requests were repeated for this release check; earlier integration evidence is
+recorded in [validation](validation.md). Successful customer cloud writes, external
+webhook delivery, live pause/resume transitions and the Linux/hosted CI matrix remain
+unverified. No repository, package or documentation site was published. Official owner
+URLs and package-name ownership must be set before release.
+
+## Before publication
+
 This project stays local until the official FlashData GitHub and npm accounts are ready.
 The planned package name is `@flashdata-dev/sdk`; verify ownership before publishing.
 
