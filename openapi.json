@@ -1,0 +1,5063 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FlashData Developer API",
+    "version": "1.0.0",
+    "description": "API-key authenticated data, jobs, bulk collections and account reads, plus public discovery. Source snapshot: 2026-10-19."
+  },
+  "servers": [
+    {
+      "url": "https://api.flashdata.dev/v2",
+      "description": "Management API"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "getHealth",
+        "tags": [
+          "System"
+        ],
+        "summary": "Service health",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/status": {
+      "get": {
+        "operationId": "getPublicStatus",
+        "tags": [
+          "System"
+        ],
+        "summary": "Read the public component status summary",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Public status summary",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControlPublic"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalog/sources": {
+      "get": {
+        "operationId": "listPublicDataSources",
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "List public source capabilities without account-specific pricing",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Public source catalog",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControlPublic"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DataSource"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plans": {
+      "get": {
+        "operationId": "listPlans",
+        "tags": [
+          "Catalog"
+        ],
+        "summary": "List public USD plans and prices",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Public plan catalog",
+            "headers": {
+              "Cache-Control": {
+                "$ref": "#/components/headers/CacheControlPublic"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanCatalog"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api-access": {
+      "get": {
+        "operationId": "getApiAccess",
+        "tags": [
+          "API Keys"
+        ],
+        "summary": "Read the calling API key's authorized sources and result origin",
+        "description": "Free, header-only X-API-Key authentication. Returns only granted public\nsource names and the configured signed-result storage origin (null if\nunavailable). No account ID, key ID, secret or storage credentials are returned.\nLocal MCP revalidates this endpoint before every tool discovery and call,\nincluding cached result reads. No query parameters or request body are accepted.\nAll /api-access routes share 120 requests per minute per client IP and return\nCache-Control private, no-store. Normal key last-used tracking still occurs.\n",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized public sources and result origin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiAccess"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "description": "Too many account reads; retry after the rate-limit window"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api-access/balance": {
+      "get": {
+        "operationId": "getApiAccessBalance",
+        "tags": [
+          "Credits"
+        ],
+        "summary": "Read the live account balance using an API key",
+        "description": "Free X-API-Key read of the authenticated account's Redis balance, shared by\nall account keys. In-flight reservations can affect the balance. Does not\nfabricate reservedCredits, fall back to Mongo, or turn failures into zero.\nNo query parameters or request body. Shares the /api-access read limit;\nresponses are private, no-store. Does not reserve or spend Credits.\n",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Signed balance and nonnegative available Credits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiAccessBalance"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "description": "Too many account reads; retry after the rate-limit window"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api-access/pricing": {
+      "get": {
+        "operationId": "getApiAccessPricing",
+        "tags": [
+          "Credits"
+        ],
+        "summary": "Read actual account prices for sources authorized by the API key",
+        "description": "Free X-API-Key read of live subscription prices, restricted to granted\nsources. Missing prices are unavailable with null values, never replaced\nwith Catalog defaults. request_count counts calls, not search results;\ndownload estimates instead expose the per-TB rate (10^12 bytes).\nEstimates do not reserve Credits or guarantee future admission.\nOnly the documented query parameters are accepted; no request body.\nShares the /api-access read limit; responses are private, no-store.\n",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "description": "A source granted to this key; omit to read all granted sources.",
+            "schema": {
+              "$ref": "#/components/schemas/ApiAccessSource"
+            }
+          },
+          {
+            "name": "request_count",
+            "in": "query",
+            "description": "Decimal integer number of calls; does not estimate download size.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000,
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Account plan and source-specific prices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiAccessPricing"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "description": "Too many account reads; retry after the rate-limit window"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/api-access/limits": {
+      "get": {
+        "operationId": "getApiAccessLimits",
+        "tags": [
+          "Credits"
+        ],
+        "summary": "Read account plan limits and current pending jobs using an API key",
+        "description": "Free X-API-Key read of account-wide concurrency, batch and pending ceilings,\nplus the current pending count. These separate snapshots do not represent\nremaining concurrency slots or an atomic admission promise. No query\nparameters or request body. Shares the /api-access read limit; responses\nare private, no-store. Does not reserve or spend Credits.\n",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Plan ceilings and current pending count",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiAccessLimits"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "description": "Too many account reads; retry after the rate-limit window"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/usage": {
+      "get": {
+        "operationId": "getApiKeyUsage",
+        "tags": [
+          "Credits"
+        ],
+        "summary": "Read account usage for sources authorized by the API key",
+        "description": "Free read, authenticated only by X-API-Key. Includes all account keys but\nonly sources granted to the calling key. Does not return query text, keys,\npayment details or other accounts. Defaults to seven days; maximum 31 days.\nDates must use UTC Z timestamps. From is inclusive and to exclusive;\nboth are rounded down to minutes. With from alone, to defaults to from + 7 days.\nWith neither, to is the start of the next minute. Aggregates are eventually\nconsistent; even updating=false does not guarantee all recent events are ingested.\nRead limit: 60 requests per minute per client IP.\n",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "description": "An exact catalog source granted to the calling key; omitted means all granted sources.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "google_search",
+                "google_images",
+                "google_news",
+                "google_shopping",
+                "google_videos",
+                "google_places",
+                "youtube_search",
+                "youtube_search_extended",
+                "youtube_metadata",
+                "youtube_transcript",
+                "youtube_captions",
+                "youtube_trainability",
+                "youtube_channel",
+                "youtube_suggestions",
+                "youtube_download"
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scoped request counts and charged Credits, with freshness information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyUsage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "429": {
+            "description": "Too many usage reads; retry after the rate-limit window"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/jobs/{jobId}": {
+      "get": {
+        "operationId": "getConsoleJob",
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Read one Data API job",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^job_[A-Za-z0-9_-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "job"
+                  ],
+                  "properties": {
+                    "job": {
+                      "$ref": "#/components/schemas/ConsoleJob"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/bulk-jobs": {
+      "get": {
+        "operationId": "listBulkJobs",
+        "tags": [
+          "Bulk Jobs"
+        ],
+        "summary": "List bulk YouTube jobs",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Cursor"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bulk job page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkJobPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createBulkJob",
+        "tags": [
+          "Bulk Jobs"
+        ],
+        "summary": "Create a bulk YouTube job and obtain a direct R2 upload URL",
+        "description": "Creates an awaiting-upload coordinator record. Upload a UTF-8 text file containing one 11-character YouTube video ID per line to upload.href, then call the start operation. The file can be streamed and may contain millions of IDs.",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBulkJobRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bulk job created with a 15-minute direct upload URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkJobCreated"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/bulk-jobs/{bulkId}": {
+      "get": {
+        "operationId": "getBulkJob",
+        "tags": [
+          "Bulk Jobs"
+        ],
+        "summary": "Read bulk job progress and aggregate counts",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/BulkId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bulk job state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateBulkJob",
+        "tags": [
+          "Bulk Jobs"
+        ],
+        "summary": "Change parameters for IDs that have not yet been admitted",
+        "description": "Partially merges options into the encrypted bulk configuration. This is allowed while awaiting upload or while paused before input scanning completes. Already-admitted child jobs keep the parameters with which they were created. A pause may briefly finish its current admission slice; retry a 409 update after the coordinator releases that slice. Set callback_url to null to clear it.",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/BulkId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBulkJobRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated bulk job state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "cancelBulkJob",
+        "tags": [
+          "Bulk Jobs"
+        ],
+        "summary": "Stop admitting new items for a bulk job",
+        "description": "Already-admitted child jobs may finish and retain their normal charges.",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/BulkId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current bulk job state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/bulk-jobs/{bulkId}/start": {
+      "post": {
+        "operationId": "startBulkJob",
+        "tags": [
+          "Bulk Jobs"
+        ],
+        "summary": "Start scanning an uploaded YouTube ID file",
+        "description": "Accepts a non-empty UTF-8 video ID file up to 2 GiB (2147483648 bytes). Pins the uploaded object's size and ETag before any child job is admitted.",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/BulkId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bulk job started or its current idempotent state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/bulk-jobs/{bulkId}/pause": {
+      "post": {
+        "operationId": "pauseBulkJob",
+        "tags": [
+          "Bulk Jobs"
+        ],
+        "summary": "Pause bulk admission and coordinator finalization",
+        "description": "Stops admitting new child jobs and suspends coordinator finalization. A child job already admitted to a worker queue is not interrupted and keeps its original parameters and charge.",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/BulkId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paused bulk job or its current idempotent state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/bulk-jobs/{bulkId}/resume": {
+      "post": {
+        "operationId": "resumeBulkJob",
+        "tags": [
+          "Bulk Jobs"
+        ],
+        "summary": "Resume a manually or automatically paused bulk job",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/BulkId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current bulk job state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      }
+    },
+    "/bulk-jobs/{bulkId}/results": {
+      "get": {
+        "operationId": "downloadBulkJobManifest",
+        "tags": [
+          "Bulk Jobs"
+        ],
+        "summary": "Download the completed bulk manifest",
+        "description": "Redirects to private R2. The manifest and its result parts remain available for 24 hours after the entire bulk job completes; management never proxies result bytes.",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/BulkId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "JSON manifest returned by R2 after the client follows the redirect",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "302": {
+            "$ref": "#/components/responses/BulkResultRedirect"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/Gone"
+          }
+        }
+      }
+    },
+    "/bulk-jobs/{bulkId}/results/{partNumber}": {
+      "get": {
+        "operationId": "downloadBulkJobPart",
+        "tags": [
+          "Bulk Jobs"
+        ],
+        "summary": "Download one gzip-compressed NDJSON bulk result part",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/BulkId"
+          },
+          {
+            "name": "partNumber",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gzip-compressed NDJSON returned by R2 after the client follows the redirect",
+            "content": {
+              "application/x-ndjson": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "302": {
+            "$ref": "#/components/responses/BulkResultRedirect"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "410": {
+            "$ref": "#/components/responses/Gone"
+          }
+        }
+      }
+    },
+    "/jobs/{jobId}/results": {
+      "get": {
+        "operationId": "downloadJobResult",
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Download a completed async result",
+        "description": "Authenticates access and redirects to a short-lived private R2 URL. The management service never proxies the result body. Clients that follow the redirect receive the JSON result directly from R2. Stored results expire 24 hours after completion.",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^job_[A-Za-z0-9_-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Completed result returned by R2 after the client follows the redirect",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "302": {
+            "description": "Redirect to the completed JSON result in private R2 storage",
+            "headers": {
+              "Location": {
+                "description": "Short-lived presigned R2 URL",
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "format": "uri"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "410": {
+            "description": "Result expired",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailable"
+          }
+        }
+      }
+    },
+    "/v1/queries/realtime": {
+      "post": {
+        "servers": [
+          {
+            "url": "https://data.flashdata.dev"
+          }
+        ],
+        "tags": [
+          "Data Queries"
+        ],
+        "operationId": "queryRealtime",
+        "summary": "Retrieve results in the same HTTP response",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Query_google_search"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Query_google_images"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Query_google_news"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Query_google_shopping"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Query_google_videos"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Query_google_places"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Query_youtube_search"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Query_youtube_search_extended"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Query_youtube_metadata"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Query_youtube_transcript"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Query_youtube_captions"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Query_youtube_trainability"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Query_youtube_channel"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Query_youtube_suggestions"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataQueryResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Query rejected or upstream unavailable. Inspect the HTTP status, code and message; see /docs/errors."
+          }
+        }
+      }
+    },
+    "/v1/queries": {
+      "post": {
+        "servers": [
+          {
+            "url": "https://data.flashdata.dev"
+          }
+        ],
+        "tags": [
+          "Data Queries"
+        ],
+        "operationId": "queryAsync",
+        "summary": "Submit a background query and follow its job links",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_google_search"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_google_images"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_google_news"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_google_shopping"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_google_videos"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_google_places"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_youtube_search"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_youtube_search_extended"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_youtube_metadata"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_youtube_transcript"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_youtube_captions"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_youtube_trainability"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_youtube_channel"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_youtube_suggestions"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AsyncQuery_youtube_download"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsyncSubmission"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Query rejected or upstream unavailable. Inspect the HTTP status, code and message; see /docs/errors."
+          }
+        }
+      }
+    },
+    "/v1/queries/batch": {
+      "post": {
+        "servers": [
+          {
+            "url": "https://data.flashdata.dev"
+          }
+        ],
+        "tags": [
+          "Data Queries"
+        ],
+        "operationId": "queryBatch",
+        "summary": "Submit multiple background queries; each is billed separately",
+        "security": [
+          {
+            "dataApiKey": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "queries"
+                ],
+                "properties": {
+                  "queries": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                      "oneOf": [
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_google_search"
+                        },
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_google_images"
+                        },
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_google_news"
+                        },
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_google_shopping"
+                        },
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_google_videos"
+                        },
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_google_places"
+                        },
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_youtube_search"
+                        },
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_youtube_search_extended"
+                        },
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_youtube_metadata"
+                        },
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_youtube_transcript"
+                        },
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_youtube_captions"
+                        },
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_youtube_trainability"
+                        },
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_youtube_channel"
+                        },
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_youtube_suggestions"
+                        },
+                        {
+                          "$ref": "#/components/schemas/AsyncQuery_youtube_download"
+                        }
+                      ]
+                    },
+                    "description": "Maximum size and pending-job admission depend on your account's current plan."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "queries": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/AsyncSubmission"
+                      }
+                    },
+                    "total_credits": {
+                      "type": "number"
+                    },
+                    "usage": {
+                      "type": "object",
+                      "properties": {
+                        "credits": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Query rejected or upstream unavailable. Inspect the HTTP status, code and message; see /docs/errors."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "dataApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "FlashData API key. Job access is restricted to the key's source scopes."
+      }
+    },
+    "headers": {
+      "CacheControlPublic": {
+        "description": "Allows short public caching with bounded stale reuse for resilient SSR",
+        "schema": {
+          "type": "string",
+          "const": "public, max-age=60, stale-while-revalidate=300"
+        }
+      }
+    },
+    "parameters": {
+      "BulkId": {
+        "name": "bulkId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^bulk_[A-Za-z0-9_-]{8,}$"
+        }
+      },
+      "Cursor": {
+        "name": "cursor",
+        "in": "query",
+        "schema": {
+          "type": "string",
+          "maxLength": 512
+        }
+      }
+    },
+    "responses": {
+      "BulkResultRedirect": {
+        "description": "Redirect to a short-lived private R2 URL; API credentials must not be forwarded",
+        "headers": {
+          "Location": {
+            "required": true,
+            "description": "Five-minute presigned R2 URL",
+            "schema": {
+              "type": "string",
+              "format": "uri"
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Resource state or idempotency conflict",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Authenticated but not permitted, or CSRF validation failed",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "Gone": {
+        "description": "The retained result has expired",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found or not owned by the caller",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "ServiceUnavailable": {
+        "description": "A required dependency or catalog is temporarily unavailable",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "Authentication required or invalid",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Request validation failed",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Problem"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ApiAccess": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sources",
+          "result_origin"
+        ],
+        "properties": {
+          "sources": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/components/schemas/ApiAccessSource"
+            }
+          },
+          "result_origin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "description": "Configured signed-result storage origin, without credentials, path, query or fragment. Not an access token or a media URL."
+          }
+        }
+      },
+      "ApiAccessBalance": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "scope",
+          "unit",
+          "balanceCredits",
+          "availableCredits",
+          "updatedAt",
+          "note"
+        ],
+        "properties": {
+          "scope": {
+            "type": "string",
+            "const": "account"
+          },
+          "unit": {
+            "type": "string",
+            "const": "Credits"
+          },
+          "balanceCredits": {
+            "type": "number",
+            "description": "Signed live balance; in-flight reservations may already be reflected."
+          },
+          "availableCredits": {
+            "type": "number",
+            "minimum": 0,
+            "description": "max(balanceCredits, 0)."
+          },
+          "updatedAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiAccessLimits": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "scope",
+          "plan",
+          "limits",
+          "current",
+          "note"
+        ],
+        "properties": {
+          "scope": {
+            "type": "string",
+            "const": "account"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/ApiAccessPlan"
+          },
+          "limits": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "concurrency": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "batchSize": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pendingJobs": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "current": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "pendingJobs"
+            ],
+            "properties": {
+              "pendingJobs": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiAccessPlan": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "billingMode": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiAccessPricing": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "unit",
+          "plan",
+          "requestCount",
+          "prices",
+          "note"
+        ],
+        "properties": {
+          "unit": {
+            "type": "string",
+            "const": "Credits"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/ApiAccessPlan"
+          },
+          "requestCount": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "prices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "available",
+                "estimatedCredits"
+              ],
+              "properties": {
+                "source": {
+                  "$ref": "#/components/schemas/ApiAccessSource"
+                },
+                "available": {
+                  "type": "boolean"
+                },
+                "creditsPerRequest": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "estimatedCredits": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "description": "Null for downloads or missing pricing."
+                },
+                "billingUnit": {
+                  "type": "string",
+                  "const": "TB"
+                },
+                "bytesPerUnit": {
+                  "type": "integer",
+                  "const": 1000000000000
+                },
+                "creditsPerTb": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "note": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "ApiAccessSource": {
+        "type": "string",
+        "enum": [
+          "google_search",
+          "google_images",
+          "google_news",
+          "google_shopping",
+          "google_videos",
+          "google_places",
+          "youtube_search",
+          "youtube_search_extended",
+          "youtube_metadata",
+          "youtube_transcript",
+          "youtube_captions",
+          "youtube_trainability",
+          "youtube_channel",
+          "youtube_suggestions",
+          "youtube_download"
+        ]
+      },
+      "ApiKeyUsage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "scope",
+          "unit",
+          "from",
+          "to",
+          "observedAt",
+          "totals",
+          "bySource",
+          "updating",
+          "note"
+        ],
+        "properties": {
+          "scope": {
+            "type": "string",
+            "const": "account_authorized_sources"
+          },
+          "unit": {
+            "type": "string",
+            "const": "Credits"
+          },
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/UsageCounts"
+          },
+          "bySource": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "source",
+                "requests",
+                "completed",
+                "failed",
+                "credits"
+              ],
+              "properties": {
+                "source": {
+                  "type": "string"
+                },
+                "requests": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "completed": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "failed": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "credits": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "updating": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
+      "AsyncQuery_google_images": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "google_images"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "gl": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Za-z]{2}$",
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "hl": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "num": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+              },
+              "tbs": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "autocorrect": {
+                "type": "boolean"
+              }
+            }
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "Google Images. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/google_images"
+        }
+      },
+      "AsyncQuery_google_news": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "google_news"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "gl": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Za-z]{2}$",
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "hl": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "num": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+              },
+              "tbs": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "autocorrect": {
+                "type": "boolean"
+              }
+            }
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "Google News. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/google_news"
+        }
+      },
+      "AsyncQuery_google_places": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "google_places"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "gl": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Za-z]{2}$",
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "hl": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "num": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+              },
+              "tbs": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "autocorrect": {
+                "type": "boolean"
+              }
+            }
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "Google Places. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/google_places"
+        }
+      },
+      "AsyncQuery_google_search": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "google_search"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "gl": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Za-z]{2}$",
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "hl": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "num": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+              },
+              "tbs": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "autocorrect": {
+                "type": "boolean"
+              }
+            }
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "Google Search. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/google_search"
+        }
+      },
+      "AsyncQuery_google_shopping": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "google_shopping"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "gl": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Za-z]{2}$",
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "hl": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "num": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+              },
+              "tbs": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "autocorrect": {
+                "type": "boolean"
+              }
+            }
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "Google Shopping. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/google_shopping"
+        }
+      },
+      "AsyncQuery_google_videos": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "google_videos"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "gl": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Za-z]{2}$",
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "hl": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "num": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+              },
+              "tbs": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "autocorrect": {
+                "type": "boolean"
+              }
+            }
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "Google Videos. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/google_videos"
+        }
+      },
+      "AsyncQuery_youtube_captions": {
+        "type": "object",
+        "required": [
+          "source",
+          "video_id"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_captions"
+          },
+          "video_id": {
+            "type": "string",
+            "minLength": 11,
+            "maxLength": 11,
+            "pattern": "^[A-Za-z0-9_-]{11}$"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "default": "en"
+              },
+              "auto": {
+                "type": "boolean",
+                "default": false,
+                "description": "true selects automatically generated captions; false selects manually provided captions. Does not fall back between the two."
+              }
+            }
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "YouTube Captions. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_captions"
+        }
+      },
+      "AsyncQuery_youtube_channel": {
+        "type": "object",
+        "required": [
+          "source",
+          "handle"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_channel"
+          },
+          "handle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "video_limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 20
+              }
+            }
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "YouTube Channel. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_channel"
+        }
+      },
+      "AsyncQuery_youtube_download": {
+        "type": "object",
+        "required": [
+          "source",
+          "video_id",
+          "params"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_download"
+          },
+          "video_id": {
+            "type": "string",
+            "minLength": 11,
+            "maxLength": 11,
+            "pattern": "^[A-Za-z0-9_-]{11}$"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "download_type": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 11,
+                "default": "audio_video",
+                "enum": [
+                  "audio_video",
+                  "video",
+                  "audio"
+                ]
+              },
+              "video_quality": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "default": "<=720",
+                "enum": [
+                  "best",
+                  "worst",
+                  "<=144",
+                  "==144",
+                  ">=144",
+                  "<=360",
+                  "==360",
+                  ">=360",
+                  "<=480",
+                  "==480",
+                  ">=480",
+                  "<=720",
+                  "==720",
+                  ">=720",
+                  "<=1080",
+                  "==1080",
+                  ">=1080",
+                  "<=1440",
+                  "==1440",
+                  ">=1440",
+                  "<=2160",
+                  "==2160",
+                  ">=2160",
+                  "<=4320",
+                  "==4320",
+                  ">=4320"
+                ]
+              },
+              "fps": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 6,
+                "pattern": "^(?:>=|<=|==)(?:[1-9]\\d?|1\\d\\d|2[0-3]\\d|240)$"
+              },
+              "audio_language": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 8,
+                "default": "default",
+                "enum": [
+                  "default",
+                  "original"
+                ]
+              },
+              "audio_quality": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 10,
+                "default": "best",
+                "enum": [
+                  "best",
+                  "320",
+                  "256",
+                  "192",
+                  "128"
+                ]
+              },
+              "yt_dlp_format": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "upload_metadata": {
+                "type": "boolean",
+                "default": false
+              },
+              "output_format": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 10,
+                "default": "mp4",
+                "enum": [
+                  "mp4",
+                  "webm",
+                  "mkv",
+                  "m4a",
+                  "mp3",
+                  "opus"
+                ]
+              },
+              "start_at": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 8,
+                "pattern": "^\\d{1,2}:[0-5]\\d:[0-5]\\d$"
+              },
+              "end_at": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 8,
+                "pattern": "^\\d{1,2}:[0-5]\\d:[0-5]\\d$"
+              },
+              "storage": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "storage_type",
+                  "storage_url"
+                ],
+                "description": "Customer-owned destination, using the same fields as Download API params.storage. Supply credentials from your configured storage; do not invent values or display secrets. GCS uses service_account; Azure uses account_name and a container SAS with write permission; other providers use access_key/secret_key and provider endpoint/region as needed.",
+                "properties": {
+                  "storage_type": {
+                    "type": "string",
+                    "enum": [
+                      "azure",
+                      "bos",
+                      "cos",
+                      "gcs",
+                      "oss",
+                      "s3",
+                      "s3_compatible",
+                      "tos"
+                    ]
+                  },
+                  "storage_url": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024,
+                    "description": "Bucket name (Azure: container name). Not a local path or a full object URL."
+                  },
+                  "object_prefix": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 513,
+                    "description": "Optional object folder prefix. Use a distinct prefix when keeping multiple versions of a video."
+                  },
+                  "access_key": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "secret_key": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "endpoint_url": {
+                    "type": "string",
+                    "maxLength": 4096,
+                    "description": "Provider endpoint, required for S3-compatible storage. Must be reachable from the download Worker."
+                  },
+                  "region": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "account_name": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]{3,24}$"
+                  },
+                  "sas_token": {
+                    "type": "string",
+                    "maxLength": 4097,
+                    "description": "Azure container SAS with write permission; never return this secret to the user in output."
+                  },
+                  "service_account": {
+                    "type": "object",
+                    "required": [
+                      "project_id",
+                      "client_email",
+                      "private_key"
+                    ],
+                    "properties": {
+                      "project_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      },
+                      "client_email": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "private_key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 16384
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                }
+              }
+            },
+            "required": [
+              "storage"
+            ]
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "YouTube Download. Supported modes: async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_download"
+        }
+      },
+      "AsyncQuery_youtube_metadata": {
+        "type": "object",
+        "required": [
+          "source",
+          "video_id"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_metadata"
+          },
+          "video_id": {
+            "type": "string",
+            "minLength": 11,
+            "maxLength": 11,
+            "pattern": "^[A-Za-z0-9_-]{11}$"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "include_formats": {
+                "type": "boolean",
+                "default": true
+              },
+              "include_chapters": {
+                "type": "boolean",
+                "default": true
+              }
+            }
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "YouTube Metadata. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_metadata"
+        }
+      },
+      "AsyncQuery_youtube_search": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_search"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "max_results": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20,
+                "default": 20
+              },
+              "filters": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "360": {
+                    "type": "boolean"
+                  },
+                  "duration": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "<4",
+                      "4-20",
+                      ">20"
+                    ]
+                  },
+                  "sort_by": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "rating",
+                      "relevance",
+                      "view_count",
+                      "upload_date"
+                    ]
+                  },
+                  "type": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "video",
+                      "channel",
+                      "playlist",
+                      "movie"
+                    ]
+                  },
+                  "upload_date": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "today",
+                      "last_hour",
+                      "this_week",
+                      "this_month",
+                      "this_year"
+                    ]
+                  },
+                  "3d": {
+                    "type": "boolean"
+                  },
+                  "4k": {
+                    "type": "boolean"
+                  },
+                  "creative_commons": {
+                    "type": "boolean"
+                  },
+                  "hd": {
+                    "type": "boolean"
+                  },
+                  "hdr": {
+                    "type": "boolean"
+                  },
+                  "live": {
+                    "type": "boolean"
+                  },
+                  "location": {
+                    "type": "boolean"
+                  },
+                  "purchased": {
+                    "type": "boolean"
+                  },
+                  "subtitles": {
+                    "type": "boolean"
+                  },
+                  "vr180": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "YouTube Search. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_search"
+        }
+      },
+      "AsyncQuery_youtube_search_extended": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_search_extended"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "max_results": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 700,
+                "default": 20
+              },
+              "filters": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "360": {
+                    "type": "boolean"
+                  },
+                  "duration": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "<4",
+                      "4-20",
+                      ">20"
+                    ]
+                  },
+                  "sort_by": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "rating",
+                      "relevance",
+                      "view_count",
+                      "upload_date"
+                    ]
+                  },
+                  "type": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "video",
+                      "channel",
+                      "playlist",
+                      "movie"
+                    ]
+                  },
+                  "upload_date": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "today",
+                      "last_hour",
+                      "this_week",
+                      "this_month",
+                      "this_year"
+                    ]
+                  },
+                  "3d": {
+                    "type": "boolean"
+                  },
+                  "4k": {
+                    "type": "boolean"
+                  },
+                  "creative_commons": {
+                    "type": "boolean"
+                  },
+                  "hd": {
+                    "type": "boolean"
+                  },
+                  "hdr": {
+                    "type": "boolean"
+                  },
+                  "live": {
+                    "type": "boolean"
+                  },
+                  "location": {
+                    "type": "boolean"
+                  },
+                  "purchased": {
+                    "type": "boolean"
+                  },
+                  "subtitles": {
+                    "type": "boolean"
+                  },
+                  "vr180": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "YouTube Extended Search. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_search_extended"
+        }
+      },
+      "AsyncQuery_youtube_suggestions": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_suggestions"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "default": "en"
+              },
+              "region": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "default": "US",
+                "pattern": "^[A-Za-z]{2}$"
+              }
+            }
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "YouTube Suggestions. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_suggestions"
+        }
+      },
+      "AsyncQuery_youtube_trainability": {
+        "type": "object",
+        "required": [
+          "source",
+          "video_id"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_trainability"
+          },
+          "video_id": {
+            "type": "string",
+            "minLength": 11,
+            "maxLength": 11,
+            "pattern": "^[A-Za-z0-9_-]{11}$"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {}
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "YouTube Trainability. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_trainability"
+        }
+      },
+      "AsyncQuery_youtube_transcript": {
+        "type": "object",
+        "required": [
+          "source",
+          "video_id"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_transcript"
+          },
+          "video_id": {
+            "type": "string",
+            "minLength": 11,
+            "maxLength": 11,
+            "pattern": "^[A-Za-z0-9_-]{11}$"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "default": "en"
+              },
+              "auto": {
+                "type": "boolean",
+                "default": true,
+                "description": "true selects automatically generated captions; false selects manually provided captions. Does not fall back between the two."
+              }
+            }
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Async and batch only. Public HTTPS URL on port 443 without credentials or a fragment. Omit, null or empty string disables callbacks. Server validates public reachability."
+          }
+        },
+        "description": "YouTube Transcript. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_transcript"
+        }
+      },
+      "AsyncSubmission": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobLink"
+            }
+          },
+          "usage": {
+            "type": "object",
+            "properties": {
+              "credits": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      },
+      "BulkJobCreated": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "job",
+          "upload"
+        ],
+        "properties": {
+          "job": {
+            "$ref": "#/components/schemas/BulkJob"
+          },
+          "upload": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "href",
+              "method",
+              "expiresAt",
+              "contentType"
+            ],
+            "properties": {
+              "href": {
+                "type": "string",
+                "format": "uri"
+              },
+              "method": {
+                "type": "string",
+                "const": "PUT"
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "contentType": {
+                "type": "string",
+                "const": "text/plain; charset=utf-8"
+              }
+            }
+          }
+        }
+      },
+      "BulkJob": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "source",
+          "status",
+          "input",
+          "counts",
+          "delivery",
+          "pauseReason",
+          "error",
+          "createdAt",
+          "startedAt",
+          "completedAt",
+          "expiresAt",
+          "links"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^bulk_[A-Za-z0-9_-]{8,}$"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "youtube_metadata",
+              "youtube_transcript",
+              "youtube_captions",
+              "youtube_trainability",
+              "youtube_download"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_upload",
+              "running",
+              "paused",
+              "finalizing",
+              "completed",
+              "failed",
+              "cancelled"
+            ]
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "bytes",
+              "complete",
+              "scannedBytes",
+              "scannedLines"
+            ],
+            "properties": {
+              "bytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "complete": {
+                "type": "boolean"
+              },
+              "scannedBytes": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "scannedLines": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "counts": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "accepted",
+              "completed",
+              "failed",
+              "invalid",
+              "results"
+            ],
+            "properties": {
+              "accepted": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "completed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "failed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "invalid": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "results": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "pauseReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "delivery": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "customerStorage",
+              "storageType",
+              "uploadedParts",
+              "retryCount"
+            ],
+            "properties": {
+              "customerStorage": {
+                "type": "boolean"
+              },
+              "storageType": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "s3",
+                  "s3_compatible",
+                  "oss",
+                  "gcs",
+                  "azure",
+                  "cos",
+                  "bos",
+                  "tos",
+                  null
+                ]
+              },
+              "uploadedParts": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "retryCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "error": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "code",
+                  "detail"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "detail": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobLink"
+            }
+          }
+        }
+      },
+      "BulkJobPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BulkJob"
+            }
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        }
+      },
+      "BulkJobResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "job"
+        ],
+        "properties": {
+          "job": {
+            "$ref": "#/components/schemas/BulkJob"
+          }
+        }
+      },
+      "ConsoleJob": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "createdAt",
+          "credits",
+          "durationMs",
+          "error",
+          "id",
+          "params",
+          "progress",
+          "result",
+          "source",
+          "status",
+          "updatedAt",
+          "videoId"
+        ],
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "credits": {
+            "type": "number",
+            "multipleOf": 0.001
+          },
+          "durationMs": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "progress": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "result": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true
+          },
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "completed",
+              "failed",
+              "pending",
+              "processing"
+            ]
+          },
+          "updatedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "videoId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "links": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobLink"
+            }
+          }
+        }
+      },
+      "CreateBulkJobRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "youtube_metadata",
+              "youtube_transcript",
+              "youtube_captions",
+              "youtube_trainability",
+              "youtube_download"
+            ]
+          },
+          "options": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Reused for every ID. Metadata accepts include_formats and include_chapters. Transcript and captions accept language and auto. Trainability accepts no source options. These four data sources optionally accept result_storage. Supported storage_type values are s3, s3_compatible, oss, gcs, azure, cos, bos, and tos. storage_url is the bucket name (Azure container name); object_prefix is optional. S3, S3-compatible, OSS, COS, BOS, and TOS use access_key and secret_key. S3-compatible and OSS also require a public HTTPS endpoint_url. COS, BOS, and TOS require region and use fixed provider endpoints. COS bucket names include the APPID. BOS S3-compatible HTTPS delivery supports bj, su, and hkg. GCS requires service_account with project_id, client_email, and private_key. Azure requires account_name and a container SAS sas_token with write permission. Default object_prefix is YYYYMMDD, frozen to the UTC bulk creation date. Files are written to <prefix>/<source>/<bulkId>/results/part-NNNNNNNN.jsonl.gz; manifest.json in the same bulk directory is written last. Each JSONL row includes its input index and completed, failed, or invalid status. Internal R2 results remain available through the result links for 24 hours. Download accepts the normal YouTube download parameters, requires customer storage, and does not permit browser_delivery. Download storage supports the same eight provider types and credential shapes listed above under the storage field. Download storage may include object_prefix; YYYYMMDD tokens resolve to the UTC upload date, while literal prefixes are unchanged."
+          },
+          "callback_url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048,
+            "description": "Optional public HTTPS endpoint notified once after manifest publication."
+          }
+        }
+      },
+      "DataQueryResponse": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "results": {
+            "type": "array",
+            "items": {}
+          },
+          "usage": {
+            "type": "object",
+            "properties": {
+              "credits": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "description": "Source-specific JSON results. See the source reference for response fields and examples."
+      },
+      "DataSource": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "category",
+          "product",
+          "modes",
+          "inputSchema",
+          "estimatedCredits",
+          "requiresStorageDestination"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "enum": [
+              "google_search",
+              "google_images",
+              "google_news",
+              "google_shopping",
+              "google_videos",
+              "google_places",
+              "youtube_search",
+              "youtube_search_extended",
+              "youtube_metadata",
+              "youtube_transcript",
+              "youtube_captions",
+              "youtube_trainability",
+              "youtube_channel",
+              "youtube_suggestions",
+              "youtube_download"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "google",
+              "youtube"
+            ]
+          },
+          "product": {
+            "type": "string",
+            "enum": [
+              "google_search",
+              "youtube_data",
+              "youtube_download"
+            ]
+          },
+          "modes": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "Only modes backed by a real adapter or consumer in the current release",
+            "items": {
+              "type": "string",
+              "enum": [
+                "realtime",
+                "async",
+                "batch"
+              ]
+            }
+          },
+          "inputSchema": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "JSON Schema used by the Playground and generated clients"
+          },
+          "estimatedCredits": {
+            "type": "number",
+            "minimum": 0,
+            "multipleOf": 0.001
+          },
+          "requiresStorageDestination": {
+            "type": "boolean",
+            "description": "Whether query submission must include per-request storage configuration."
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "service",
+          "version",
+          "time"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "degraded"
+            ]
+          },
+          "service": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "JobLink": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rel",
+          "href",
+          "method"
+        ],
+        "properties": {
+          "rel": {
+            "type": "string",
+            "enum": [
+              "self",
+              "results",
+              "content",
+              "download"
+            ]
+          },
+          "href": {
+            "type": "string",
+            "format": "uri"
+          },
+          "method": {
+            "type": "string",
+            "const": "GET"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "hasMore",
+          "limit"
+        ],
+        "properties": {
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "previousCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
+      },
+      "PlanCatalog": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data",
+          "currency",
+          "billingAvailability",
+          "creditValueUsd"
+        ],
+        "properties": {
+          "trialOffer": {
+            "description": "Current one-time trial allowance expressed as alternative PAYG usage amounts. Eligibility and approval are required. The amounts share one balance and are not additive. Null when a reliable estimate is unavailable. This is not an account eligibility decision or a promise of immediate credit issuance.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PublicTrialOffer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Plan"
+            }
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD"
+          },
+          "creditValueUsd": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "description": "Fixed USD value of one credit, used to preview custom top-ups. The server computes the credited amount."
+          },
+          "billingAvailability": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unconfigured",
+              "unavailable"
+            ]
+          },
+          "billingMessage": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Stable, non-sensitive explanation suitable for the Pricing and Billing UI."
+          }
+        }
+      },
+      "Plan": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "description",
+          "includedCredits",
+          "limits",
+          "prices",
+          "features",
+          "usagePrices"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^plan_"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "includedCredits": {
+            "type": "number",
+            "minimum": 0,
+            "multipleOf": 0.001,
+            "description": "Credits included in each paid subscription cycle; zero for Pay As You Go."
+          },
+          "limits": {
+            "$ref": "#/components/schemas/PlanLimits"
+          },
+          "prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanPrice"
+            }
+          },
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "usagePrices": {
+            "$ref": "#/components/schemas/PlanUsagePrices"
+          }
+        }
+      },
+      "PlanLimits": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "concurrency",
+          "maxBatchSize",
+          "maxPendingJobs"
+        ],
+        "properties": {
+          "concurrency": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "maxBatchSize": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "maxPendingJobs": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "PlanPrice": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "currency",
+          "unitAmount",
+          "credits",
+          "type",
+          "interval"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^prc_"
+          },
+          "currency": {
+            "type": "string",
+            "const": "USD"
+          },
+          "unitAmount": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "USD cents"
+          },
+          "credits": {
+            "type": "number",
+            "minimum": 0,
+            "multipleOf": 0.001,
+            "description": "Credits granted by a successful one-time top-up; zero for recurring prices."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "recurring",
+              "one_time"
+            ]
+          },
+          "interval": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "month",
+              "year",
+              null
+            ]
+          }
+        }
+      },
+      "PlanUsagePrices": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "googlePer1kCents",
+          "youtubePer1kCents",
+          "downloadPerTbCents"
+        ],
+        "properties": {
+          "googlePer1kCents": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Google request price per 1,000 successful requests, in USD cents."
+          },
+          "youtubePer1kCents": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Standard YouTube request price per 1,000 successful requests, in USD cents."
+          },
+          "downloadPerTbCents": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Download price per decimal TB (1,000,000,000,000 bytes), in USD cents."
+          }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code",
+          "requestId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
+          },
+          "code": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": "string",
+            "pattern": "^req_"
+          },
+          "fieldErrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FieldError"
+            }
+          }
+        }
+      },
+      "FieldError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "field",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "PublicStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "updatedAt",
+          "components"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "healthy",
+              "degraded",
+              "outage"
+            ]
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicStatusComponent"
+            }
+          }
+        }
+      },
+      "PublicStatusComponent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "operational",
+              "degraded",
+              "outage"
+            ]
+          }
+        }
+      },
+      "PublicTrialOffer": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "googleSearchRequests",
+          "youtubeDataRequests",
+          "downloadGigabytes"
+        ],
+        "properties": {
+          "maxApiRequests": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Maximum free API calls when the entire trial grant is spent on the lowest-cost per-request API at current Pay as you go rates. Other APIs may allow fewer calls. Downloads are billed by delivered bytes and excluded from this count."
+          },
+          "googleSearchRequests": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Requests if the entire grant is spent on Google sources, using the highest current source rate."
+          },
+          "youtubeDataRequests": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Standard YouTube requests, excluding Extended Search, using the highest current source rate."
+          },
+          "downloadGigabytes": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Approximate delivered media volume in decimal GB (1 GB = 1000000000 bytes). Zero when the grant cannot cover the initial download reservation. Completion also depends on per-job reservations and settlement."
+          }
+        }
+      },
+      "Query_google_images": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "google_images"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "gl": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Za-z]{2}$",
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "hl": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "num": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+              },
+              "tbs": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "autocorrect": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "description": "Google Images. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/google_images"
+        }
+      },
+      "Query_google_news": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "google_news"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "gl": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Za-z]{2}$",
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "hl": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "num": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+              },
+              "tbs": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "autocorrect": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "description": "Google News. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/google_news"
+        }
+      },
+      "Query_google_places": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "google_places"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "gl": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Za-z]{2}$",
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "hl": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "num": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+              },
+              "tbs": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "autocorrect": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "description": "Google Places. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/google_places"
+        }
+      },
+      "Query_google_search": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "google_search"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "gl": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Za-z]{2}$",
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "hl": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "num": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+              },
+              "tbs": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "autocorrect": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "description": "Google Search. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/google_search"
+        }
+      },
+      "Query_google_shopping": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "google_shopping"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "gl": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Za-z]{2}$",
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "hl": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "num": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+              },
+              "tbs": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "autocorrect": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "description": "Google Shopping. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/google_shopping"
+        }
+      },
+      "Query_google_videos": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "google_videos"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "gl": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "pattern": "^[A-Za-z]{2}$",
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "hl": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+              },
+              "location": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "num": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+              },
+              "page": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+              },
+              "tbs": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              "autocorrect": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "description": "Google Videos. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/google_videos"
+        }
+      },
+      "Query_youtube_captions": {
+        "type": "object",
+        "required": [
+          "source",
+          "video_id"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_captions"
+          },
+          "video_id": {
+            "type": "string",
+            "minLength": 11,
+            "maxLength": 11,
+            "pattern": "^[A-Za-z0-9_-]{11}$"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "default": "en"
+              },
+              "auto": {
+                "type": "boolean",
+                "default": false,
+                "description": "true selects automatically generated captions; false selects manually provided captions. Does not fall back between the two."
+              }
+            }
+          }
+        },
+        "description": "YouTube Captions. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_captions"
+        }
+      },
+      "Query_youtube_channel": {
+        "type": "object",
+        "required": [
+          "source",
+          "handle"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_channel"
+          },
+          "handle": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "video_limit": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 20
+              }
+            }
+          }
+        },
+        "description": "YouTube Channel. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_channel"
+        }
+      },
+      "Query_youtube_download": {
+        "type": "object",
+        "required": [
+          "source",
+          "video_id",
+          "params"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_download"
+          },
+          "video_id": {
+            "type": "string",
+            "minLength": 11,
+            "maxLength": 11,
+            "pattern": "^[A-Za-z0-9_-]{11}$"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "download_type": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 11,
+                "default": "audio_video",
+                "enum": [
+                  "audio_video",
+                  "video",
+                  "audio"
+                ]
+              },
+              "video_quality": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40,
+                "default": "<=720",
+                "enum": [
+                  "best",
+                  "worst",
+                  "<=144",
+                  "==144",
+                  ">=144",
+                  "<=360",
+                  "==360",
+                  ">=360",
+                  "<=480",
+                  "==480",
+                  ">=480",
+                  "<=720",
+                  "==720",
+                  ">=720",
+                  "<=1080",
+                  "==1080",
+                  ">=1080",
+                  "<=1440",
+                  "==1440",
+                  ">=1440",
+                  "<=2160",
+                  "==2160",
+                  ">=2160",
+                  "<=4320",
+                  "==4320",
+                  ">=4320"
+                ]
+              },
+              "fps": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 6,
+                "pattern": "^(?:>=|<=|==)(?:[1-9]\\d?|1\\d\\d|2[0-3]\\d|240)$"
+              },
+              "audio_language": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 8,
+                "default": "default",
+                "enum": [
+                  "default",
+                  "original"
+                ]
+              },
+              "audio_quality": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 10,
+                "default": "best",
+                "enum": [
+                  "best",
+                  "320",
+                  "256",
+                  "192",
+                  "128"
+                ]
+              },
+              "yt_dlp_format": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024
+              },
+              "upload_metadata": {
+                "type": "boolean",
+                "default": false
+              },
+              "output_format": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 10,
+                "default": "mp4",
+                "enum": [
+                  "mp4",
+                  "webm",
+                  "mkv",
+                  "m4a",
+                  "mp3",
+                  "opus"
+                ]
+              },
+              "start_at": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 8,
+                "pattern": "^\\d{1,2}:[0-5]\\d:[0-5]\\d$"
+              },
+              "end_at": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 8,
+                "pattern": "^\\d{1,2}:[0-5]\\d:[0-5]\\d$"
+              },
+              "storage": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "storage_type",
+                  "storage_url"
+                ],
+                "description": "Customer-owned destination, using the same fields as Download API params.storage. Supply credentials from your configured storage; do not invent values or display secrets. GCS uses service_account; Azure uses account_name and a container SAS with write permission; other providers use access_key/secret_key and provider endpoint/region as needed.",
+                "properties": {
+                  "storage_type": {
+                    "type": "string",
+                    "enum": [
+                      "azure",
+                      "bos",
+                      "cos",
+                      "gcs",
+                      "oss",
+                      "s3",
+                      "s3_compatible",
+                      "tos"
+                    ]
+                  },
+                  "storage_url": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1024,
+                    "description": "Bucket name (Azure: container name). Not a local path or a full object URL."
+                  },
+                  "object_prefix": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 513,
+                    "description": "Optional object folder prefix. Use a distinct prefix when keeping multiple versions of a video."
+                  },
+                  "access_key": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "secret_key": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "endpoint_url": {
+                    "type": "string",
+                    "maxLength": 4096,
+                    "description": "Provider endpoint, required for S3-compatible storage. Must be reachable from the download Worker."
+                  },
+                  "region": {
+                    "type": "string",
+                    "maxLength": 4096
+                  },
+                  "account_name": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9]{3,24}$"
+                  },
+                  "sas_token": {
+                    "type": "string",
+                    "maxLength": 4097,
+                    "description": "Azure container SAS with write permission; never return this secret to the user in output."
+                  },
+                  "service_account": {
+                    "type": "object",
+                    "required": [
+                      "project_id",
+                      "client_email",
+                      "private_key"
+                    ],
+                    "properties": {
+                      "project_id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 256
+                      },
+                      "client_email": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "private_key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 16384
+                      }
+                    },
+                    "additionalProperties": true
+                  }
+                }
+              }
+            },
+            "required": [
+              "storage"
+            ]
+          }
+        },
+        "description": "YouTube Download. Supported modes: async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_download"
+        }
+      },
+      "Query_youtube_metadata": {
+        "type": "object",
+        "required": [
+          "source",
+          "video_id"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_metadata"
+          },
+          "video_id": {
+            "type": "string",
+            "minLength": 11,
+            "maxLength": 11,
+            "pattern": "^[A-Za-z0-9_-]{11}$"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "include_formats": {
+                "type": "boolean",
+                "default": true
+              },
+              "include_chapters": {
+                "type": "boolean",
+                "default": true
+              }
+            }
+          }
+        },
+        "description": "YouTube Metadata. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_metadata"
+        }
+      },
+      "Query_youtube_search": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_search"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "max_results": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 20,
+                "default": 20
+              },
+              "filters": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "360": {
+                    "type": "boolean"
+                  },
+                  "duration": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "<4",
+                      "4-20",
+                      ">20"
+                    ]
+                  },
+                  "sort_by": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "rating",
+                      "relevance",
+                      "view_count",
+                      "upload_date"
+                    ]
+                  },
+                  "type": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "video",
+                      "channel",
+                      "playlist",
+                      "movie"
+                    ]
+                  },
+                  "upload_date": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "today",
+                      "last_hour",
+                      "this_week",
+                      "this_month",
+                      "this_year"
+                    ]
+                  },
+                  "3d": {
+                    "type": "boolean"
+                  },
+                  "4k": {
+                    "type": "boolean"
+                  },
+                  "creative_commons": {
+                    "type": "boolean"
+                  },
+                  "hd": {
+                    "type": "boolean"
+                  },
+                  "hdr": {
+                    "type": "boolean"
+                  },
+                  "live": {
+                    "type": "boolean"
+                  },
+                  "location": {
+                    "type": "boolean"
+                  },
+                  "purchased": {
+                    "type": "boolean"
+                  },
+                  "subtitles": {
+                    "type": "boolean"
+                  },
+                  "vr180": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "YouTube Search. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_search"
+        }
+      },
+      "Query_youtube_search_extended": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_search_extended"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "max_results": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 700,
+                "default": 20
+              },
+              "filters": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "360": {
+                    "type": "boolean"
+                  },
+                  "duration": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "<4",
+                      "4-20",
+                      ">20"
+                    ]
+                  },
+                  "sort_by": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "rating",
+                      "relevance",
+                      "view_count",
+                      "upload_date"
+                    ]
+                  },
+                  "type": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "video",
+                      "channel",
+                      "playlist",
+                      "movie"
+                    ]
+                  },
+                  "upload_date": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000,
+                    "enum": [
+                      "today",
+                      "last_hour",
+                      "this_week",
+                      "this_month",
+                      "this_year"
+                    ]
+                  },
+                  "3d": {
+                    "type": "boolean"
+                  },
+                  "4k": {
+                    "type": "boolean"
+                  },
+                  "creative_commons": {
+                    "type": "boolean"
+                  },
+                  "hd": {
+                    "type": "boolean"
+                  },
+                  "hdr": {
+                    "type": "boolean"
+                  },
+                  "live": {
+                    "type": "boolean"
+                  },
+                  "location": {
+                    "type": "boolean"
+                  },
+                  "purchased": {
+                    "type": "boolean"
+                  },
+                  "subtitles": {
+                    "type": "boolean"
+                  },
+                  "vr180": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "description": "YouTube Extended Search. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_search_extended"
+        }
+      },
+      "Query_youtube_suggestions": {
+        "type": "object",
+        "required": [
+          "source",
+          "query"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_suggestions"
+          },
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "default": "en"
+              },
+              "region": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 2,
+                "default": "US",
+                "pattern": "^[A-Za-z]{2}$"
+              }
+            }
+          }
+        },
+        "description": "YouTube Suggestions. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_suggestions"
+        }
+      },
+      "Query_youtube_trainability": {
+        "type": "object",
+        "required": [
+          "source",
+          "video_id"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_trainability"
+          },
+          "video_id": {
+            "type": "string",
+            "minLength": 11,
+            "maxLength": 11,
+            "pattern": "^[A-Za-z0-9_-]{11}$"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {}
+          }
+        },
+        "description": "YouTube Trainability. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_trainability"
+        }
+      },
+      "Query_youtube_transcript": {
+        "type": "object",
+        "required": [
+          "source",
+          "video_id"
+        ],
+        "properties": {
+          "source": {
+            "type": "string",
+            "const": "youtube_transcript"
+          },
+          "video_id": {
+            "type": "string",
+            "minLength": 11,
+            "maxLength": 11,
+            "pattern": "^[A-Za-z0-9_-]{11}$"
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "language": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 35,
+                "pattern": "^[A-Za-z0-9-]+$",
+                "default": "en"
+              },
+              "auto": {
+                "type": "boolean",
+                "default": true,
+                "description": "true selects automatically generated captions; false selects manually provided captions. Does not fall back between the two."
+              }
+            }
+          }
+        },
+        "description": "YouTube Transcript. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+        "externalDocs": {
+          "url": "https://flashdata.dev/docs/sources/youtube_transcript"
+        }
+      },
+      "UpdateBulkJobRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "minProperties": 1,
+        "properties": {
+          "options": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Partial option update. Nested storage fields are merged so unchanged credentials do not need to be resent. Data result_storage fields are merged the same way. After all IDs have been scanned, a paused data bulk job accepts credential updates only: access_key and secret_key, GCS service_account, or Azure sas_token, depending on the storage type. The complete merged configuration is validated before it is stored."
+          },
+          "callback_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "maxLength": 2048,
+            "description": "Replacement completion callback, or null to remove the callback."
+          }
+        }
+      },
+      "UsageCounts": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requests",
+          "completed",
+          "failed",
+          "credits"
+        ],
+        "properties": {
+          "requests": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "failed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "credits": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Charged Credits in the current aggregate; pending work may not be finally settled."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+import { stat } from 'node:fs/promises';
+import { FlashData } from '../dist/index.js';
+const path = process.argv[2];
+if (!path || !(await stat(path)).isFile()) throw new Error('Usage: node examples/bulk.mjs path/to/video-ids.txt');
+const client = new FlashData();
+const created = await client.bulk.create({source: 'youtube_metadata', options: {include_formats: false}});
+const bulkId = created.job.id;
+console.log('Save this bulk ID:', bulkId);
+await client.bulk.uploadFile(created, path);
+console.log(await client.bulk.start(bulkId));

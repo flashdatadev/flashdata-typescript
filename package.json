@@ -1,0 +1,25 @@
+{
+  "name": "@flashdata-dev/sdk",
+  "version": "0.1.0",
+  "description": "Official TypeScript and JavaScript SDK for FlashData Google, YouTube and cloud media APIs",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {".": {"import": {"types": "./dist/index.d.ts", "default": "./dist/index.js"}, "require": {"types": "./dist/index.d.cts", "default": "./dist/index.cjs"}}},
+  "files": ["dist", "docs", "examples", "README.md", "LICENSE", "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "openapi.json", "source-contract.json"],
+  "engines": {"node": ">=22"},
+  "license": "MIT",
+  "author": "FlashData <support@flashdata.dev>",
+  "homepage": "https://flashdata.dev",
+  "keywords": ["flashdata", "sdk", "google-search", "youtube", "transcript", "bulk", "typescript"],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "node scripts/build.mjs && tsc -p tsconfig.examples.json --noEmit",
+    "test": "npm run build && node --test tests/*.test.mjs",
+    "examples:offline": "node examples/offline.mjs",
+    "prepack": "npm run build"
+  },
+  "dependencies": {"ajv": "^8.17.1"},
+  "devDependencies": {"@types/node": "^22.0.0", "esbuild": "^0.25.0", "typescript": "~5.9.3"}
+}

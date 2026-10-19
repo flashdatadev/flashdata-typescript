@@ -1,0 +1,17 @@
+# Documentation
+
+- [Getting started](getting-started.md)
+- [Client configuration and response types](client.md)
+- [All Google and YouTube sources](sources/index.md)
+- [Background queries, batches and job results](jobs.md)
+- [Pagination](pagination.md)
+- [Bulk files, controls and result parts](bulk.md)
+- [Cloud storage](storage.md)
+- [Account and public discovery](account.md)
+- [Errors, timeouts and recovery](errors.md)
+- [API coverage](api-reference.md)
+- [Architecture and SerpApi reference study](architecture.md)
+- [Executable examples](../examples/README.md)
+- [Contributing and local checks](../CONTRIBUTING.md)
+- [Release preparation](release.md)
+- [Local validation](validation.md)

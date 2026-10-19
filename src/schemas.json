@@ -1,0 +1,1096 @@
+{
+  "google_search": {
+    "type": "object",
+    "required": [
+      "source",
+      "query"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "google_search"
+      },
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "gl": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+          },
+          "hl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35,
+            "pattern": "^[A-Za-z0-9-]+$",
+            "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "num": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+          },
+          "tbs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "autocorrect": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "description": "Google Search. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/google_search"
+    }
+  },
+  "google_images": {
+    "type": "object",
+    "required": [
+      "source",
+      "query"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "google_images"
+      },
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "gl": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+          },
+          "hl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35,
+            "pattern": "^[A-Za-z0-9-]+$",
+            "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "num": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+          },
+          "tbs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "autocorrect": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "description": "Google Images. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/google_images"
+    }
+  },
+  "google_news": {
+    "type": "object",
+    "required": [
+      "source",
+      "query"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "google_news"
+      },
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "gl": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+          },
+          "hl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35,
+            "pattern": "^[A-Za-z0-9-]+$",
+            "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "num": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+          },
+          "tbs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "autocorrect": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "description": "Google News. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/google_news"
+    }
+  },
+  "google_shopping": {
+    "type": "object",
+    "required": [
+      "source",
+      "query"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "google_shopping"
+      },
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "gl": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+          },
+          "hl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35,
+            "pattern": "^[A-Za-z0-9-]+$",
+            "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "num": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+          },
+          "tbs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "autocorrect": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "description": "Google Shopping. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/google_shopping"
+    }
+  },
+  "google_videos": {
+    "type": "object",
+    "required": [
+      "source",
+      "query"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "google_videos"
+      },
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "gl": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+          },
+          "hl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35,
+            "pattern": "^[A-Za-z0-9-]+$",
+            "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "num": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+          },
+          "tbs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "autocorrect": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "description": "Google Videos. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/google_videos"
+    }
+  },
+  "google_places": {
+    "type": "object",
+    "required": [
+      "source",
+      "query"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "google_places"
+      },
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "gl": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "pattern": "^[A-Za-z]{2}$",
+            "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+          },
+          "hl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35,
+            "pattern": "^[A-Za-z0-9-]+$",
+            "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+          },
+          "location": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "num": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Requested result count. Actual count varies by query and search type; no fixed value is added when omitted."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Requested page. Set explicitly for pagination; each page is a separate query."
+          },
+          "tbs": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "autocorrect": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "description": "Google Places. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/google_places"
+    }
+  },
+  "youtube_search": {
+    "type": "object",
+    "required": [
+      "source",
+      "query"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "youtube_search"
+      },
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "max_results": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "default": 20
+          },
+          "filters": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "360": {
+                "type": "boolean"
+              },
+              "duration": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "enum": [
+                  "<4",
+                  "4-20",
+                  ">20"
+                ]
+              },
+              "sort_by": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "enum": [
+                  "rating",
+                  "relevance",
+                  "view_count",
+                  "upload_date"
+                ]
+              },
+              "type": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "enum": [
+                  "video",
+                  "channel",
+                  "playlist",
+                  "movie"
+                ]
+              },
+              "upload_date": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "enum": [
+                  "today",
+                  "last_hour",
+                  "this_week",
+                  "this_month",
+                  "this_year"
+                ]
+              },
+              "3d": {
+                "type": "boolean"
+              },
+              "4k": {
+                "type": "boolean"
+              },
+              "creative_commons": {
+                "type": "boolean"
+              },
+              "hd": {
+                "type": "boolean"
+              },
+              "hdr": {
+                "type": "boolean"
+              },
+              "live": {
+                "type": "boolean"
+              },
+              "location": {
+                "type": "boolean"
+              },
+              "purchased": {
+                "type": "boolean"
+              },
+              "subtitles": {
+                "type": "boolean"
+              },
+              "vr180": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "description": "YouTube Search. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/youtube_search"
+    }
+  },
+  "youtube_search_extended": {
+    "type": "object",
+    "required": [
+      "source",
+      "query"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "youtube_search_extended"
+      },
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "max_results": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 700,
+            "default": 20
+          },
+          "filters": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "360": {
+                "type": "boolean"
+              },
+              "duration": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "enum": [
+                  "<4",
+                  "4-20",
+                  ">20"
+                ]
+              },
+              "sort_by": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "enum": [
+                  "rating",
+                  "relevance",
+                  "view_count",
+                  "upload_date"
+                ]
+              },
+              "type": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "enum": [
+                  "video",
+                  "channel",
+                  "playlist",
+                  "movie"
+                ]
+              },
+              "upload_date": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000,
+                "enum": [
+                  "today",
+                  "last_hour",
+                  "this_week",
+                  "this_month",
+                  "this_year"
+                ]
+              },
+              "3d": {
+                "type": "boolean"
+              },
+              "4k": {
+                "type": "boolean"
+              },
+              "creative_commons": {
+                "type": "boolean"
+              },
+              "hd": {
+                "type": "boolean"
+              },
+              "hdr": {
+                "type": "boolean"
+              },
+              "live": {
+                "type": "boolean"
+              },
+              "location": {
+                "type": "boolean"
+              },
+              "purchased": {
+                "type": "boolean"
+              },
+              "subtitles": {
+                "type": "boolean"
+              },
+              "vr180": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "description": "YouTube Extended Search. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/youtube_search_extended"
+    }
+  },
+  "youtube_metadata": {
+    "type": "object",
+    "required": [
+      "source",
+      "video_id"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "youtube_metadata"
+      },
+      "video_id": {
+        "type": "string",
+        "minLength": 11,
+        "maxLength": 11,
+        "pattern": "^[A-Za-z0-9_-]{11}$"
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "include_formats": {
+            "type": "boolean",
+            "default": true
+          },
+          "include_chapters": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      }
+    },
+    "description": "YouTube Metadata. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/youtube_metadata"
+    }
+  },
+  "youtube_transcript": {
+    "type": "object",
+    "required": [
+      "source",
+      "video_id"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "youtube_transcript"
+      },
+      "video_id": {
+        "type": "string",
+        "minLength": 11,
+        "maxLength": 11,
+        "pattern": "^[A-Za-z0-9_-]{11}$"
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35,
+            "pattern": "^[A-Za-z0-9-]+$",
+            "default": "en"
+          },
+          "auto": {
+            "type": "boolean",
+            "default": true,
+            "description": "true selects automatically generated captions; false selects manually provided captions. Does not fall back between the two."
+          }
+        }
+      }
+    },
+    "description": "YouTube Transcript. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/youtube_transcript"
+    }
+  },
+  "youtube_captions": {
+    "type": "object",
+    "required": [
+      "source",
+      "video_id"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "youtube_captions"
+      },
+      "video_id": {
+        "type": "string",
+        "minLength": 11,
+        "maxLength": 11,
+        "pattern": "^[A-Za-z0-9_-]{11}$"
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35,
+            "pattern": "^[A-Za-z0-9-]+$",
+            "default": "en"
+          },
+          "auto": {
+            "type": "boolean",
+            "default": false,
+            "description": "true selects automatically generated captions; false selects manually provided captions. Does not fall back between the two."
+          }
+        }
+      }
+    },
+    "description": "YouTube Captions. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/youtube_captions"
+    }
+  },
+  "youtube_trainability": {
+    "type": "object",
+    "required": [
+      "source",
+      "video_id"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "youtube_trainability"
+      },
+      "video_id": {
+        "type": "string",
+        "minLength": 11,
+        "maxLength": 11,
+        "pattern": "^[A-Za-z0-9_-]{11}$"
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {}
+      }
+    },
+    "description": "YouTube Trainability. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/youtube_trainability"
+    }
+  },
+  "youtube_channel": {
+    "type": "object",
+    "required": [
+      "source",
+      "handle"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "youtube_channel"
+      },
+      "handle": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "video_limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20
+          }
+        }
+      }
+    },
+    "description": "YouTube Channel. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/youtube_channel"
+    }
+  },
+  "youtube_suggestions": {
+    "type": "object",
+    "required": [
+      "source",
+      "query"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "youtube_suggestions"
+      },
+      "query": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "language": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 35,
+            "pattern": "^[A-Za-z0-9-]+$",
+            "default": "en"
+          },
+          "region": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "default": "US",
+            "pattern": "^[A-Za-z]{2}$"
+          }
+        }
+      }
+    },
+    "description": "YouTube Suggestions. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/youtube_suggestions"
+    }
+  },
+  "youtube_download": {
+    "type": "object",
+    "required": [
+      "source",
+      "video_id",
+      "params"
+    ],
+    "properties": {
+      "source": {
+        "type": "string",
+        "const": "youtube_download"
+      },
+      "video_id": {
+        "type": "string",
+        "minLength": 11,
+        "maxLength": 11,
+        "pattern": "^[A-Za-z0-9_-]{11}$"
+      },
+      "params": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "download_type": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 11,
+            "default": "audio_video",
+            "enum": [
+              "audio_video",
+              "video",
+              "audio"
+            ]
+          },
+          "video_quality": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 40,
+            "default": "<=720",
+            "enum": [
+              "best",
+              "worst",
+              "<=144",
+              "==144",
+              ">=144",
+              "<=360",
+              "==360",
+              ">=360",
+              "<=480",
+              "==480",
+              ">=480",
+              "<=720",
+              "==720",
+              ">=720",
+              "<=1080",
+              "==1080",
+              ">=1080",
+              "<=1440",
+              "==1440",
+              ">=1440",
+              "<=2160",
+              "==2160",
+              ">=2160",
+              "<=4320",
+              "==4320",
+              ">=4320"
+            ]
+          },
+          "fps": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 6,
+            "pattern": "^(?:>=|<=|==)(?:[1-9]\\d?|1\\d\\d|2[0-3]\\d|240)$"
+          },
+          "audio_language": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8,
+            "default": "default",
+            "enum": [
+              "default",
+              "original"
+            ]
+          },
+          "audio_quality": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10,
+            "default": "best",
+            "enum": [
+              "best",
+              "320",
+              "256",
+              "192",
+              "128"
+            ]
+          },
+          "yt_dlp_format": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "upload_metadata": {
+            "type": "boolean",
+            "default": false
+          },
+          "output_format": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10,
+            "default": "mp4",
+            "enum": [
+              "mp4",
+              "webm",
+              "mkv",
+              "m4a",
+              "mp3",
+              "opus"
+            ]
+          },
+          "start_at": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8,
+            "pattern": "^\\d{1,2}:[0-5]\\d:[0-5]\\d$"
+          },
+          "end_at": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8,
+            "pattern": "^\\d{1,2}:[0-5]\\d:[0-5]\\d$"
+          },
+          "storage": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "storage_type",
+              "storage_url"
+            ],
+            "description": "Customer-owned destination, using the same fields as Download API params.storage. Supply credentials from your configured storage; do not invent values or display secrets. GCS uses service_account; Azure uses account_name and a container SAS with write permission; other providers use access_key/secret_key and provider endpoint/region as needed.",
+            "properties": {
+              "storage_type": {
+                "type": "string",
+                "enum": [
+                  "azure",
+                  "bos",
+                  "cos",
+                  "gcs",
+                  "oss",
+                  "s3",
+                  "s3_compatible",
+                  "tos"
+                ]
+              },
+              "storage_url": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 1024,
+                "description": "Bucket name (Azure: container name). Not a local path or a full object URL."
+              },
+              "object_prefix": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 513,
+                "description": "Optional object folder prefix. Use a distinct prefix when keeping multiple versions of a video."
+              },
+              "access_key": {
+                "type": "string",
+                "maxLength": 4096
+              },
+              "secret_key": {
+                "type": "string",
+                "maxLength": 4096
+              },
+              "endpoint_url": {
+                "type": "string",
+                "maxLength": 4096,
+                "description": "Provider endpoint, required for S3-compatible storage. Must be reachable from the download Worker."
+              },
+              "region": {
+                "type": "string",
+                "maxLength": 4096
+              },
+              "account_name": {
+                "type": "string",
+                "pattern": "^[a-z0-9]{3,24}$"
+              },
+              "sas_token": {
+                "type": "string",
+                "maxLength": 4097,
+                "description": "Azure container SAS with write permission; never return this secret to the user in output."
+              },
+              "service_account": {
+                "type": "object",
+                "required": [
+                  "project_id",
+                  "client_email",
+                  "private_key"
+                ],
+                "properties": {
+                  "project_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  "client_email": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "private_key": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 16384
+                  }
+                },
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "required": [
+          "storage"
+        ]
+      }
+    },
+    "description": "YouTube Download. Supported modes: async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
+    "externalDocs": {
+      "url": "https://flashdata.dev/docs/sources/youtube_download"
+    }
+  }
+}
