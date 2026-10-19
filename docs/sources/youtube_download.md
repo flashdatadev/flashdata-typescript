@@ -1,74 +1,55 @@
-# Youtube Download
+# YouTube cloud downloads
 
-Wire source: `youtube_download`. Helper: `client.youtube.download`. Required input: `video_id`.
-Modes: async, batch. [Product API reference](https://flashdata.dev/docs/sources/youtube_download).
+Deliver audio or video to your cloud storage. Individual and batch downloads run in the background. Pass destination credentials through `storage`; output media is not returned as a local file.
 
-## Runnable example
-
-Run from the repository root after setting `FLASHDATA_API_KEY`:
-
-```sh
-node examples/youtube_download.mjs
-```
+## Example
 
 ```javascript
-import { readFile } from "node:fs/promises";
-import { FlashData } from "../dist/index.js";
-const storage = JSON.parse(await readFile(process.env.FLASHDATA_STORAGE_FILE, "utf8"));
-const client = new FlashData();
-const receipt = await client.youtube.download({video_id: "dQw4w9WgXcQ", storage, video_quality: "<=720"});
-console.log(receipt.id);
+import { readFile } from 'node:fs/promises';
+import { FlashData } from '@flashdata-dev/sdk';
+
+const storage = JSON.parse(await readFile('private-storage.json', 'utf8'));
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const receipt = await client.youtube.download({
+  video_id: 'dQw4w9WgXcQ',
+  storage,
+  video_quality: '<=720',
+  output_format: 'mp4',
+});
+console.log('Save this ID:', receipt.id);
+await client.jobs.wait(receipt.id, { timeoutMs: 600000, pollIntervalMs: 5000 });
+console.log(await client.jobs.result(receipt.id));
 ```
+
+Run `node examples/youtube_download.mjs dQw4w9WgXcQ --storage-file private-storage.json --output artifacts/youtube_download.json` from the checkout. Use `--help` for options. The command consumes credits.
+
+Configure `private-storage.json` first; see [storage](../storage.md). Delivery requires a working customer destination.
 
 ## Parameters
 
-The helper takes the main input and the following source options. Generic query methods
-put options inside `params`. Omitted defaults are resolved by the API, not inserted by
-the SDK. Request options select mode/callback separately from source parameters.
+`video_id` is required. Source options are properties on the first input object, or entries in `params` when using `queries`. Downloads always run in the background; realtime download is unsupported.
 
-| Parameter | Type | Server/catalog default | Meaning / bounds |
-| --- | --- | --- | --- |
-| `download_type` | string | "audio_video" |  Values: `audio_video`, `video`, `audio` |
-| `video_quality` | string | "<=720" |  Values: `best`, `worst`, `<=144`, `==144`, `>=144`, `<=360`, `==360`, `>=360`, `<=480`, `==480`, `>=480`, `<=720`, `==720`, `>=720`, `<=1080`, `==1080`, `>=1080`, `<=1440`, `==1440`, `>=1440`, `<=2160`, `==2160`, `>=2160`, `<=4320`, `==4320`, `>=4320` |
-| `fps` | string | Omitted; provider/server behavior |  Must match the documented format. |
-| `audio_language` | string | "default" |  Values: `default`, `original` |
-| `audio_quality` | string | "best" |  Values: `best`, `320`, `256`, `192`, `128` |
-| `yt_dlp_format` | string | Omitted; provider/server behavior |  |
-| `upload_metadata` | boolean | false |  |
-| `output_format` | string | "mp4" |  Values: `mp4`, `webm`, `mkv`, `m4a`, `mp3`, `opus` |
-| `start_at` | string | Omitted; provider/server behavior |  Must match the documented format. |
-| `end_at` | string | Omitted; provider/server behavior |  Must match the documented format. |
-| `storage` | object, required | none | [Customer storage configuration](../storage.md). |
+| Option            | Type / constraints                                                                                                                                                                                                                                  | Default                          |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `download_type`   | `audio_video`, `video`, `audio`                                                                                                                                                                                                                     | "audio_video"                    |
+| `video_quality`   | `best`, `worst`, `<=144`, `==144`, `>=144`, `<=360`, `==360`, `>=360`, `<=480`, `==480`, `>=480`, `<=720`, `==720`, `>=720`, `<=1080`, `==1080`, `>=1080`, `<=1440`, `==1440`, `>=1440`, `<=2160`, `==2160`, `>=2160`, `<=4320`, `==4320`, `>=4320` | "<=720"                          |
+| `fps`             | string; pattern `^(?:>=                                                                                                                                                                                                                             | <=                               | ==)(?:[1-9]\d? | 1\d\d | 2[0-3]\d | 240)$` | service default / optional |
+| `audio_language`  | `default`, `original`                                                                                                                                                                                                                               | "default"                        |
+| `audio_quality`   | `best`, `320`, `256`, `192`, `128`                                                                                                                                                                                                                  | "best"                           |
+| `yt_dlp_format`   | string                                                                                                                                                                                                                                              | service default / optional       |
+| `upload_metadata` | boolean                                                                                                                                                                                                                                             | false                            |
+| `output_format`   | video: `mp4`, `webm`, `mkv`; audio: `m4a`, `mp3`, `opus`                                                                                                                                                                                            | `mp4` for video; `m4a` for audio |
+| `start_at`        | string; pattern `^\d{1,2}:[0-5]\d:[0-5]\d$`                                                                                                                                                                                                         | service default / optional       |
+| `end_at`          | string; pattern `^\d{1,2}:[0-5]\d:[0-5]\d$`                                                                                                                                                                                                         | service default / optional       |
+| `storage`         | destination object; see storage guide                                                                                                                                                                                                               | required                         |
 
-For `filters`, see the complete property definitions in [source-contract.json](../../source-contract.json).
-Download defaults to async. Persist the receipt ID before waiting or reading results. Format combinations and destination credentials are validated by the server.
+`audio_quality` applies only to audio downloads. `video_quality` and `fps` do not apply
+to audio-only work. `audio_language` does not apply to video-only work. A `yt_dlp_format`
+selector overrides the normal video quality, frame rate and audio language selection;
+use it only when you need that control. `end_at` must be later than `start_at`.
+Timestamps use `HH:MM:SS`; an omitted start defaults to `00:00:00` when clipping.
+The server validates provider credentials and combinations before admitting the request.
 
-## Response example
+## Use at scale
 
-Illustrative provider fields; availability varies. The SDK preserves unknown fields.
-
-```json
-{
-  "id": "job_example123",
-  "source": "youtube_download",
-  "status": "pending",
-  "usage": {
-    "credits": 0
-  },
-  "created_at": "2026-10-19T00:00:00Z",
-  "links": [
-    {
-      "rel": "self",
-      "href": "https://api.flashdata.dev/v2/jobs/job_example123",
-      "method": "GET"
-    },
-    {
-      "rel": "results",
-      "href": "https://api.flashdata.dev/v2/jobs/job_example123/results",
-      "method": "GET"
-    }
-  ]
-}
-```
-
-[Jobs and results](../jobs.md) · [Errors](../errors.md) · [Source index](index.md)
+Use [bulk jobs](../bulk.md) for a file of video IDs with the same options. All sources support [background and batch queries](../jobs.md). Read [errors and recovery](../errors.md) before adding application retries.

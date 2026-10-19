@@ -1,59 +1,27 @@
-# Youtube Trainability
+# YouTube license labels
 
-Wire source: `youtube_trainability`. Helper: `client.youtube.licenseCheck`. Required input: `video_id`.
-Modes: realtime, async, batch. [Product API reference](https://flashdata.dev/docs/sources/youtube_trainability).
+Inspect the API’s `permitted` labels for a video. The source name is `youtube_trainability`, but these labels report detected license information; they do not grant model-training or media-reuse permission.
 
-## Runnable example
-
-Run from the repository root after setting `FLASHDATA_API_KEY`:
-
-```sh
-node examples/youtube_trainability.mjs
-```
+## Example
 
 ```javascript
-import { FlashData } from "../dist/index.js";
-const client = new FlashData();
-const response = await client.youtube.licenseCheck({"video_id": "dQw4w9WgXcQ"});
-console.log(response);
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const response = await client.youtube.licenseCheck({ video_id: 'dQw4w9WgXcQ' });
+for (const video of response.results) console.log(video.videoId, video.permitted ?? []);
 ```
+
+Run `node examples/youtube_trainability.mjs dQw4w9WgXcQ --output artifacts/youtube_trainability.json` from the checkout. Use `--help` for options. The command consumes credits.
 
 ## Parameters
 
-The helper takes the main input and the following source options. Generic query methods
-put options inside `params`. Omitted defaults are resolved by the API, not inserted by
-the SDK. Request options select mode/callback separately from source parameters.
+`video_id` is required. Source options are properties on the first input object, or entries in `params` when using `queries`. Helpers default to realtime; pass `{mode: 'async'}` as the second argument for background work. Request options also accept `timeoutMs` and `signal`.
 
-| Parameter | Type | Server/catalog default | Meaning / bounds |
-| --- | --- | --- | --- |
+| Option | Type / constraints         | Default |
+| ------ | -------------------------- | ------- |
+| —      | No source-specific options | —       |
 
+## Use at scale
 
-For `filters`, see the complete property definitions in [source-contract.json](../../source-contract.json).
-The wire source is `youtube_trainability`; the SDK helper is named license check because the result classifies a Creative Commons label. It does not read separate training permissions or grant rights.
-
-## Response example
-
-Illustrative provider fields; availability varies. The SDK preserves unknown fields.
-
-```json
-{
-  "source": "youtube_trainability",
-  "status": "done",
-  "results": [
-    {
-      "videoId": "dQw4w9WgXcQ",
-      "kind": "youtube#videoTrainability",
-      "etag": "dQw4w9WgXcQ",
-      "permitted": [
-        "none"
-      ]
-    }
-  ],
-  "usage": {
-    "credits": 0.01
-  },
-  "created_at": "2026-09-16T07:45:48.691Z"
-}
-```
-
-[Jobs and results](../jobs.md) · [Errors](../errors.md) · [Source index](index.md)
+Use [bulk jobs](../bulk.md) for a file of video IDs with the same options. All sources support [background and batch queries](../jobs.md). Read [errors and recovery](../errors.md) before adding application retries.

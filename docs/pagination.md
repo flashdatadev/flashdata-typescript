@@ -1,24 +1,30 @@
-# Pagination
+# Bounded Google pagination
 
-Every Google result page is a separate paid query. The helper requires an explicit
-maximum page count, uses sequential requests, and stops after an empty result list.
-The first page counts toward that maximum. It adds only the requested page parameter.
+Each fetched page is a separate paid query, including an empty last page. `google.pages`
+requires an explicit budget, yields responses lazily, and stops after an empty hit list.
+Breaking iteration prevents future page submissions.
 
 ```javascript
-import { FlashData } from "../dist/index.js";
-const client = new FlashData();
-for await (const response of client.google.pages("google_search", "coffee", {maxPages: 3, params: {gl: "us"}})) {
-  console.log(response.results);
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+for await (const response of client.google.pages('google_search', 'coffee', {
+  maxPages: 2,
+  params: { num: 5, gl: 'us', hl: 'en' },
+})) {
+  for (const payload of response.results) {
+    for (const hit of payload.organic ?? []) console.log(hit.title, hit.link);
+  }
 }
 ```
 
-`startPage` defaults to 1. Breaking the loop prevents future page submissions.
+`source` is one of the six Google source names. `maxPages` is 1–100; `startPage` defaults
+to 1 and the final page must be at most 100. Put source fields in `params`; use `startPage`
+instead of `params.page`. For one page, call the source helper with `page` in its input.
+Request options accept `signal` and `timeoutMs` alongside the page budget.
 
-Supported sources: all six Google sources. Pages are bounded to the API's range 1–100.
-YouTube search uses `max_results` rather than an invented continuation token. Standard
-YouTube search requests up to 20 results; Extended Search up to 700, at a separate rate.
-Neither guarantees that many results.
-
-Bulk collection listing uses free cursor pagination. Pass the returned `pagination.nextCursor`
-to the next `bulk.list` call only when `hasMore` is true. Stop on a missing/repeated cursor.
-This is independent of paid Google result pagination.
+The `search_to_csv.mjs` example deduplicates links and exports page, position, title, link,
+and snippet. Positions are upstream values; the SDK does not infer global ranks.
+YouTube search uses `max_results`, not Google's `page` parameter. Extended search requests
+up to 700 entities in one call, subject to availability. Bulk listings instead use free
+cursor pagination through `bulk.list` or bounded `bulk.iterJobs`.

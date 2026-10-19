@@ -1,0 +1,9 @@
+node_modules/
+dist/
+docs/_build/
+artifacts/
+package-lock.json
+openapi.json
+source-contract.json
+src/schemas.json
+tests/fixtures/

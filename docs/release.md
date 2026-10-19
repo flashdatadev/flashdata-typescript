@@ -1,26 +1,19 @@
 # Release preparation
 
-This repository is local. Before publication, create the official FlashData GitHub
-account, choose the repository owner and verify package-name availability/ownership.
-Planned distribution names are `flashdata` on PyPI and `@flashdata-dev/sdk` on npm;
-neither registry has been changed by this work.
+This project stays local until the official FlashData GitHub and npm accounts are ready.
+The planned package name is `@flashdata-dev/sdk`; verify ownership before publishing.
 
-1. Set repository/source/issue metadata to the actual official repository URL.
-2. Review license, contact, source contract, changelog and test results.
-3. Run all local checks and inspect the package contents listed below.
-4. Initialize/push the existing local repository to the official GitHub repository.
-5. Run GitHub CI on supported platforms and runtimes. The workflows do not publish.
-6. Set up registry credentials or trusted publishing through the registry's official
-   account settings, then deliberately publish the reviewed artifact.
+1. Set repository and issue metadata to the actual official URLs once they exist.
+2. Review contracts, license, contact details, changelog and validation evidence.
+3. Run `npm ci`, `npm run typecheck`, `npm test`, `npm run format:check`, and `npm run docs:build`.
+4. Run `npm run verify:package` to build an archive in `artifacts/`, check its contents,
+   install it in an independent application, and verify ESM/CommonJS imports, strict
+   NodeNext types and the installed offline example.
+5. Inspect `npm pack --dry-run --json`, then build the final local archive with `npm pack`.
+6. Run the configured CI matrix after an official repository exists, and deliberately
+   publish the reviewed package through the official account.
 
-```sh
-npm ci
-npm run typecheck
-npm test
-npm pack --dry-run
-npm pack
-```
-
-The npm archive includes built ESM/CommonJS code, declaration files, guides, examples,
-public API snapshots, README, license and changelog. Install the `.tgz` in an empty application and verify ESM, require() and
-TypeScript resolution before release. No npm publishing token/workflow is configured.
+The archive includes built runtime/types, source maps, Markdown guides, examples and API
+snapshots. Local exports, generated HTML, credentials and test caches must be excluded.
+Source files accompany source maps so published diagnostics remain inspectable. Build
+configuration/tooling is development-only. No workflow publishes packages or a hosted site.

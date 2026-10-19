@@ -1,81 +1,55 @@
-# Youtube Search
+# YouTube search
 
-Wire source: `youtube_search`. Helper: `client.youtube.search`. Required input: `query`.
-Modes: realtime, async, batch. [Product API reference](https://flashdata.dev/docs/sources/youtube_search).
+Discover videos or other entity types. Search payloads contain a nested `results` list plus `query` and `totalResults`. Video entries have `videoId`, `title`, `channel`, and optional duration/views.
 
-## Runnable example
-
-Run from the repository root after setting `FLASHDATA_API_KEY`:
-
-```sh
-node examples/youtube_search.mjs
-```
+## Example
 
 ```javascript
-import { FlashData } from "../dist/index.js";
-const client = new FlashData();
-const response = await client.youtube.search({"query": "python", "max_results": 20});
-console.log(response);
-```
+import { FlashData } from '@flashdata-dev/sdk';
 
-## Parameters
-
-The helper takes the main input and the following source options. Generic query methods
-put options inside `params`. Omitted defaults are resolved by the API, not inserted by
-the SDK. Request options select mode/callback separately from source parameters.
-
-| Parameter | Type | Server/catalog default | Meaning / bounds |
-| --- | --- | --- | --- |
-| `max_results` | integer | 20 |  Range: 1–20. |
-| `filters` | object | Omitted; provider/server behavior |  |
-
-For `filters`, see the complete property definitions in [source-contract.json](../../source-contract.json).
-
-## Response example
-
-Illustrative provider fields; availability varies. The SDK preserves unknown fields.
-
-```json
-{
-  "source": "youtube_search",
-  "status": "done",
-  "results": [
-    {
-      "results": [
-        {
-          "videoId": "K5KVEU3aaeQ",
-          "title": "Python Full Course for Beginners",
-          "channel": "Programming with Mosh",
-          "channelId": "UCWv7vMbMWH4-V0ZXdmDpPBA",
-          "channelUrl": "https://www.youtube.com/channel/UCWv7vMbMWH4-V0ZXdmDpPBA",
-          "duration": 7341,
-          "durationString": "2:02:21",
-          "viewCount": 7565956,
-          "uploadDate": null,
-          "description": "Master Python from scratch No fluff\u2014just clear, practical coding skills to kickstart your journey! Want to dive deeper? - Check\u00a0...",
-          "thumbnails": [
-            {
-              "url": "https://i.ytimg.com/vi/K5KVEU3aaeQ/hq720.jpg?sqp=-oaymwEcCOgCEMoBSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLAXbPvWkQhvRSOYWD6mp9EVbfWSYg",
-              "width": 360,
-              "height": 202
-            },
-            {
-              "url": "https://i.ytimg.com/vi/K5KVEU3aaeQ/hq720.jpg?sqp=-oaymwEcCNAFEJQDSFXyq4qpAw4IARUAAIhCGAFwAcABBg==&rs=AOn4CLAbeaIhlZJzT49VmWFTFrL3rCq--Q",
-              "width": 720,
-              "height": 404
-            }
-          ]
-        }
-      ],
-      "totalResults": 20,
-      "query": "python"
-    }
-  ],
-  "usage": {
-    "credits": 0.01
-  },
-  "created_at": "2026-09-16T07:41:45.295Z"
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const response = await client.youtube.search({ query: 'python tutorial', max_results: 5 });
+for (const payload of response.results) {
+  for (const item of payload.results ?? [])
+    console.log(item.title, item.link ?? item.videoId ?? item.address);
 }
 ```
 
-[Jobs and results](../jobs.md) · [Errors](../errors.md) · [Source index](index.md)
+Run `node examples/youtube_search.mjs python tutorial --output artifacts/youtube_search.json` from the checkout. Use `--help` for options. The command consumes credits.
+
+## Parameters
+
+`query` is required. Source options are properties on the first input object, or entries in `params` when using `queries`. Helpers default to realtime; pass `{mode: 'async'}` as the second argument for background work. Request options also accept `timeoutMs` and `signal`.
+
+| Option        | Type / constraints | Default                    |
+| ------------- | ------------------ | -------------------------- |
+| `max_results` | integer; 1–20      | 20                         |
+| `filters`     | object / null      | service default / optional |
+
+### Search filters
+
+`filters` is a dictionary. Supported fields:
+
+| Field              | Allowed values                                               |
+| ------------------ | ------------------------------------------------------------ |
+| `360`              | boolean                                                      |
+| `duration`         | `<4`, `4-20`, `>20`                                          |
+| `sort_by`          | `rating`, `relevance`, `view_count`, `upload_date`           |
+| `type`             | `video`, `channel`, `playlist`, `movie`                      |
+| `upload_date`      | `today`, `last_hour`, `this_week`, `this_month`, `this_year` |
+| `3d`               | boolean                                                      |
+| `4k`               | boolean                                                      |
+| `creative_commons` | boolean                                                      |
+| `hd`               | boolean                                                      |
+| `hdr`              | boolean                                                      |
+| `live`             | boolean                                                      |
+| `location`         | boolean                                                      |
+| `purchased`        | boolean                                                      |
+| `subtitles`        | boolean                                                      |
+| `vr180`            | boolean                                                      |
+
+For example, `filters: {type: 'video', duration: '<4', hd: true}`. Unsupported filters are rejected locally.
+
+## Use at scale
+
+All sources support [background and batch queries](../jobs.md). Read [errors and recovery](../errors.md) before adding application retries.

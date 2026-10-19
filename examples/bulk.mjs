@@ -1,10 +1,20 @@
-import { stat } from 'node:fs/promises';
-import { FlashData } from '../dist/index.js';
-const path = process.argv[2];
-if (!path || !(await stat(path)).isFile()) throw new Error('Usage: node examples/bulk.mjs path/to/video-ids.txt');
-const client = new FlashData();
-const created = await client.bulk.create({source: 'youtube_metadata', options: {include_formats: false}});
-const bulkId = created.job.id;
-console.log('Save this bulk ID:', bulkId);
-await client.bulk.uploadFile(created, path);
-console.log(await client.bulk.start(bulkId));
+/** Enrich a video ID file with metadata; resume existing IDs without resubmitting. */
+
+import { FlashData } from '@flashdata-dev/sdk';
+import { command, isMain, run } from './_support.mjs';
+import { bulkTask } from './_bulk.mjs';
+export async function main(argv = process.argv.slice(2)) {
+  const args = command(
+    'Bulk metadata export',
+    argv,
+    { 'bulk-id': { type: 'string' }, 'wait-timeout-ms': { type: 'string', default: '3600000' } },
+    '[video-ids.txt]',
+  );
+  if (!args) return;
+  const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+  await bulkTask(client, args, async () => ({
+    source: 'youtube_metadata',
+    options: { include_formats: false },
+  }));
+}
+if (isMain(import.meta.url)) await run(main);

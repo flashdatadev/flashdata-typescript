@@ -1,0 +1,21 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "FlashData TypeScript & JavaScript SDK",
+  "entryPoints": ["src/index.ts"],
+  "projectDocuments": [
+    "docs/**/*.md",
+    "examples/README.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "CHANGELOG.md"
+  ],
+  "readme": "README.md",
+  "out": "docs/_build",
+  "excludeInternal": true,
+  "excludeProtected": true,
+  "disableSources": true,
+  "treatWarningsAsErrors": true,
+  "includeVersion": true,
+  "highlightLanguages": ["typescript", "javascript", "json", "bash", "powershell", "text"],
+  "navigationLinks": { "FlashData": "https://flashdata.dev" }
+}

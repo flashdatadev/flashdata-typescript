@@ -1,5 +1,5 @@
-import { FlashData } from '../dist/index.js';
-const client = new FlashData();
-for await (const response of client.google.pages('google_search', 'coffee', {maxPages: 2, params: {gl: 'us'}})) {
-  console.log(response.results);
-}
+/** Export bounded Google pages; see search_to_csv.mjs. */
+import { main } from './search_to_csv.mjs';
+import { isMain, run } from './_support.mjs';
+export { main };
+if (isMain(import.meta.url)) await run(main);

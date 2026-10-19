@@ -5,16 +5,16 @@ YouTube Download delivers media into a destination you configure. Pass it in
 Bulk data output can use `options.result_storage`. Files are not returned as local media
 attachments. The SDK's signed result reader retrieves a JSON result/manifest.
 
-| storage_type | Required credential/configuration fields in addition to storage_url |
-| --- | --- |
-| s3 | access_key, secret_key; region when required by your bucket |
-| s3_compatible | access_key, secret_key, public HTTPS endpoint_url |
-| oss | access_key, secret_key, region's public HTTPS endpoint_url |
-| cos | access_key, secret_key, ap-* region; bucket includes APPID |
-| bos | access_key, secret_key, region bj/su/hkg |
-| tos | access_key, secret_key, supported region |
-| gcs | service_account object with project_id, client_email, private_key |
-| azure | account_name and container SAS sas_token with write permission |
+| storage_type  | Required credential/configuration fields in addition to storage_url |
+| ------------- | ------------------------------------------------------------------- |
+| s3            | access_key, secret_key; region when required by your bucket         |
+| s3_compatible | access_key, secret_key, public HTTPS endpoint_url                   |
+| oss           | access_key, secret_key, region's public HTTPS endpoint_url          |
+| cos           | access_key, secret_key, ap-* region; bucket includes APPID          |
+| bos           | access_key, secret_key, region bj/su/hkg                            |
+| tos           | access_key, secret_key, supported region                            |
+| gcs           | service_account object with project_id, client_email, private_key   |
+| azure         | account_name and container SAS sas_token with write permission      |
 
 `storage_url` is a bucket name (Azure: container), not a full object URL. `object_prefix`
 is optional. Keep credentials in your private file/secret manager and do not commit it.
@@ -25,7 +25,13 @@ provider-specific destination and media option combination.
 Example private S3 configuration; replace placeholders in a protected file:
 
 ```json
-{"storage_type":"s3","storage_url":"your-media-bucket","region":"us-east-1","access_key":"YOUR_ACCESS_KEY","secret_key":"YOUR_SECRET_KEY"}
+{
+  "storage_type": "s3",
+  "storage_url": "your-media-bucket",
+  "region": "us-east-1",
+  "access_key": "YOUR_ACCESS_KEY",
+  "secret_key": "YOUR_SECRET_KEY"
+}
 ```
 
 Download supports audio/video/audio-only selection, video quality constraints, frame-rate

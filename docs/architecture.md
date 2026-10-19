@@ -1,30 +1,24 @@
-# Architecture and reference study
+# SDK architecture
 
-The starting reference was [serpapi/serpapi-python](https://github.com/serpapi/serpapi-python),
-examined on 2026-10-19. Its repository separates HTTP transport, a small client,
-result helpers and exceptions; includes README quickstart, detailed user guides,
-engine-specific examples, API reference, contributor instructions, history, package
-metadata, tests and separate build/docs/release workflows. Its guides cover client
-configuration, output formats, pagination, async/archive reads, timeouts/errors,
-account discovery, threading and migration.
+`FlashData` delegates to query, Google, YouTube, account, jobs, bulk, and public resources.
+Source helpers construct typed wire objects and call `queries`. Source validation uses
+checked-in JSON Schemas without injecting billing defaults. The service is authoritative
+for admission, provider credentials, source availability and state transitions.
 
-This repository applies that structure to FlashData's actual API. FlashData returns
-JSON, uses API-key headers, separates Data and Management origins, and supports bulk
-ID files plus signed object-storage results. Each source has its own guide and example.
-Source contracts and wire types are checked in with an API-key-only OpenAPI snapshot.
-All implementation code is original FlashData SDK code.
+`client.ts` owns authentication, deadlines, response byte limits, signed redirects and
+streamed uploads. `common.ts` contains validation, redaction, JSON parsing and safe origins.
+`resources.ts` provides resource methods, polling and bounded iterators. `types.ts` preserves
+wire names such as `video_id` and `availableCredits`; SDK configuration uses `apiKey` and
+`timeoutMs`. Responses preserve additional source fields.
 
-## Layout
+API requests use explicit headers on Data/Management origins. Signed storage receives no
+API key or cookies and redirects are manual. The authenticated storage origin is cached
+for the client's lifetime. Neither request retries nor submission repetition is implicit.
+Native fetch owns its shared connection pools; custom fetch implementations remain owned
+by their caller.
 
-- `src/`: public client, source/resource methods, HTTP handling, validation, types and errors.
-- `docs/`: setup, user guides, reference and one page per source.
-- `examples/`: runnable source examples, workflows and a free offline demonstration.
-- `tests/`: fake transports, local HTTP checks, source fixtures and opt-in live account read.
-- `openapi.json`: supported developer endpoints; excludes browser/admin operations.
-- `source-contract.json`: source parameters/modes snapshot for review and future updates.
-- `.github/workflows/`: offline CI and build artifacts; publication remains manual.
-
-Generated wire types preserve server field names. Source response hints are optional
-provider fields, not a promise that each upstream result contains every example field.
-When the product contract changes, update snapshots, runtime schemas, types, source
-guides and contract tests together. Do not silently insert billing defaults or retries.
+Update schemas, types, API snapshots, guides, examples and contract tests together when
+the service changes. Keep request validation separate from provider result assumptions.
+The default suite executes source examples and documentation with isolated API fixtures;
+opt-in live tests verify the production contract. The TypeDoc site is generated locally,
+and no workflow publishes packages or documentation.

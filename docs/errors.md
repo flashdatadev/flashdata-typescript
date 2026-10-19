@@ -1,26 +1,54 @@
-# Errors, timeouts and recovery
+# Errors and recovery
 
-| Exception | Meaning / next action |
-| --- | --- |
-| ValidationError | Input/configuration was rejected before a request; correct the indicated field. Values and credentials are not echoed. |
-| APIError | HTTP failure with status, code, request ID, retry-after and redacted body. Inspect server details. |
-| SubmissionUnknownError | A mutation lost its response; it may already have taken effect or consumed Credits. Inspect Jobs before another submission. |
-| RequestTimeoutError | A GET exceeded its network timeout or was cancelled. Read the same existing job/result again when appropriate. |
-| ConnectionError | A read/upload network operation failed; keep its existing IDs. |
-| ProtocolError | Unexpected JSON/status, untrusted signed origin or unsupported redirect. |
-| ResponseTooLargeError | Transferred/decompressed data or a row exceeded configured bounds. |
-| PollingTimeoutError | The explicit wait deadline elapsed; the exception retains the job ID. |
-| JobFailedError | A standard/bulk job failed or a bulk job was cancelled; the exception contains its job record. |
-| JobPausedError | A bulk collection paused and requires explicit action before resume. |
+All SDK exceptions inherit from `FlashDataError` and expose a meaningful `name`.
 
-Common HTTP statuses: 401 invalid key; 402 insufficient Credits; 403 source/access
-restriction; 409 current job state; 410 expired result; 422 invalid fields; 429 rate/plan
-limit; 5xx unavailable service/upstream. A batch may return item-level errors in HTTP 200.
-No request is automatically retried, including 429/5xx. Retry-after metadata is exposed
-for your application's deliberate policy. A failed output read does not authorize
-repeating a paid submission.
+| Exception                | Meaning and next step                                                         |
+| ------------------------ | ----------------------------------------------------------------------------- |
+| `ValidationError`        | Invalid local input; no request was sent. Fix the indicated field.            |
+| `APIError`               | Non-success HTTP response from API or storage. Inspect structured attributes. |
+| `RequestTimeoutError`    | A read/upload exceeded its network deadline. Keep existing job IDs.           |
+| `RequestAbortedError`    | Local cancellation. Polling errors preserve `jobId`.                          |
+| `ConnectionError`        | Read/upload connection failed. Check connectivity and existing task state.    |
+| `SubmissionUnknownError` | A mutation lost its response; it may have taken effect. Reconcile first.      |
+| `PollingTimeoutError`    | Polling deadline reached; continue reading the same `jobId`.                  |
+| `JobFailedError`         | A job failed or bulk was cancelled. Inspect `job`.                            |
+| `JobPausedError`         | Bulk needs action. Inspect pause state before deciding how to resume.         |
+| `ProtocolError`          | Malformed JSON/gzip/UTF-8, invalid envelope, or unsafe signed redirect.       |
+| `ResponseTooLargeError`  | Response/decompressed part/row exceeded configured bounds.                    |
 
-`APIError` fields are `statusCode`, `code`, `requestId`, `retryAfter`, `body`.
-Request deadlines are milliseconds and cover fetch plus body reading. Pass `signal`
-to cancel local requests or waits. Cancelling a paid request cannot roll back admission.
-Polling total timeout and individual HTTP timeout are separate budgets.
+```javascript
+import { APIError, FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+try {
+  await client.youtube.captions({ video_id: 'dQw4w9WgXcQ', language: 'en', auto: false });
+} catch (error) {
+  if (!(error instanceof APIError)) throw error;
+  console.error(error.statusCode, error.code, error.requestId, error.retryAfter, error.fieldErrors);
+}
+```
+
+`APIError.body` retains parsed JSON with known credential fields redacted. Error text
+removes the API key and request storage secret values. `requestId` comes from a response
+header or Management API problem body; `retryAfter` comes from a header or the Data API's
+retry hint converted to a string. It can be absent. `fieldErrors` contains Management
+validation details when available. Avoid logging raw requests or signed URLs yourself.
+
+Typical statuses are 400/422 for inputs, 401 for authentication, 402 for credit admission,
+403 for access, 404 for absent/inaccessible jobs, 409 for state conflict/not-ready results,
+410 for expired results, 429 for limits, and 5xx for service errors. Missing caption tracks
+are API errors; do not treat every error as transient.
+
+## Unknown submissions and retries
+
+No request is automatically retried. Interrupted POST/PATCH/DELETE requests may have
+taken effect and raise `SubmissionUnknownError`. Repeating paid work can create another
+charge. Save IDs as soon as receipts arrive. Continue reads with those IDs after polling
+or process failure. API keys cannot list standard jobs; if no ID was received, reconcile
+through your account or support before repeating the submission. No idempotency behavior
+is promised by this SDK.
+
+Read retries can use application-controlled backoff and a bounded budget. Respect
+`retryAfter`. Polling stops on network/API errors instead of hiding them behind more calls.
+Signals already aborted before dispatch send nothing; cancellation after mutation dispatch
+is an unknown outcome. See [configuration](client.md) for examples.

@@ -1,47 +1,111 @@
-# Bulk YouTube collections
+# Bulk datasets and cloud media downloads
 
-Bulk accepts `youtube_metadata`, `youtube_transcript`, `youtube_captions`,
-`youtube_trainability` and `youtube_download`. Search, channels and suggestions use
-individual queries or regular batches. A bulk input is a non-empty UTF-8 text file of
-one 11-character video ID per line, up to 2 GiB. Uploads are streamed in 64 KiB chunks.
+Bulk applies one source and shared options to a UTF-8 file containing one 11-character
+YouTube video ID per line (1 byte to 2 GiB). It supports metadata, transcripts, captions,
+license labels, and downloads. Search/channel/suggestions use individual queries or batch.
 
-1. Create a collection with a source and shared options. Persist `created.job.id`.
-2. Upload the file to the returned descriptor using the upload helper. The presigned
-   upload URL lasts 15 minutes. It receives the declared content type and file size.
-3. Start the existing collection by ID. Creating/uploading alone does not start queries.
-4. Read progress or explicitly wait. A paused state raises `JobPausedError` and requires
-   a deliberate update/resume; the SDK never replenishes Credits or resumes itself.
-5. Retrieve the manifest and read its `parts[].number` with the part/row methods.
+## Create, upload, start, export
+
+Create `video-ids.txt` with one ID per line, then run:
 
 ```javascript
-import { FlashData } from "../dist/index.js";
-const client = new FlashData();
-const created = await client.bulk.create({source: "youtube_metadata", options: {include_formats: false}});
-const bulkId = created.job.id;
-console.log(bulkId);
-await client.bulk.uploadFile(created, "video-ids.txt");
+import { mkdir, open } from 'node:fs/promises';
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const receipt = await client.bulk.create({
+  source: 'youtube_metadata',
+  options: { include_formats: false },
+});
+const id = receipt.job.id;
+console.log('Save this bulk ID:', id);
+await client.bulk.uploadFile(receipt, 'video-ids.txt');
+await client.bulk.start(id);
+const completed = await client.bulk.wait(id, { timeoutMs: 3600000, pollIntervalMs: 5000 });
+await mkdir('artifacts', { recursive: true });
+const output = await open('artifacts/dataset.ndjson', 'w');
+try {
+  for await (const row of client.bulk.rows(id)) await output.writeFile(JSON.stringify(row) + '\n');
+} finally {
+  await output.close();
+}
+console.log(completed.counts);
+```
+
+Creation returns `{job, upload}`. Keep the whole receipt for `uploadFile`, which streams
+the input file using the signed PUT descriptor's content type and length. Its upload URL
+expires after 15 minutes. Creating or uploading does not start the task. Keep the ID if
+upload fails; retry the same upload only while its descriptor is valid. An expired input
+upload requires a replacement draft; cancel the unused draft before creating another.
+Do not log upload descriptors or signed URLs.
+
+## Download media into your storage
+
+Downloads require `source: 'youtube_download'` and destination credentials in `options.storage`.
+Use the same lifecycle as data jobs. Here is the complete task (prepare `video-ids.txt`
+and private destination JSON first; see [storage](storage.md)):
+
+```javascript
+import { readFile } from 'node:fs/promises';
+import { FlashData } from '@flashdata-dev/sdk';
+
+const storage = JSON.parse(await readFile('private-storage.json', 'utf8'));
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const receipt = await client.bulk.create({
+  source: 'youtube_download',
+  options: {
+    download_type: 'audio_video',
+    video_quality: '<=720',
+    output_format: 'mp4',
+    storage,
+  },
+});
+const bulkId = receipt.job.id;
+console.log('Save this bulk ID:', bulkId);
+await client.bulk.uploadFile(receipt, 'video-ids.txt');
 await client.bulk.start(bulkId);
-await client.bulk.wait(bulkId, {timeoutMs: 3600000, pollIntervalMs: 5000});
-const manifest = await client.bulk.manifest(bulkId);
-for (const part of manifest.parts) {
-  for await (const row of client.bulk.iterRows(bulkId, part.number)) console.log(row);
+const completed = await client.bulk.wait(bulkId, { timeoutMs: 3600000, pollIntervalMs: 5000 });
+console.log('Counts:', completed.counts);
+for await (const row of client.bulk.rows(bulkId)) {
+  console.log(row.video_id, row.status);
 }
 ```
 
-`pause`, `resume`, `update` and `cancel` operate on the same bulk ID. Cancellation stops
-new admission; already-admitted child jobs may finish and retain their charges. Updates
-affect future admissions and may receive 409 while a coordinator slice finishes. After
-all IDs are scanned, paused data collections accept only supported credential updates.
-Set `callback_url` to null to remove a bulk completion callback.
+Media goes to your bucket; signed task result parts contain JSON delivery records. A
+completed task may contain failed items, so inspect final counts and per-row status.
+Downloads are billed by actual delivered bytes. Customer cloud charges apply separately.
+The `bulk_download.mjs` CLI saves a job record beside the NDJSON export and supports
+`--bulk-id` to resume without re-uploading or re-submitting work.
+This resume command waits for a task that has already started. An `awaiting_upload`
+draft still needs its input uploaded and `start` called; a paused task needs its blocking
+condition resolved and `resume` called before waiting again.
 
-Each result row preserves its input index and completed/failed/invalid outcome. A
-completed collection can include failed rows. The manifest and parts expire 24 hours
-after collection completion. Read one part at a time: the SDK bounds both transferred
-and decompressed bytes by the configured response limit and caps each NDJSON line at
-1 MiB. It does not load every collection part into memory together. The raw part method
-returns bytes, which may be gzip-compressed; row iteration detects gzip automatically.
+## Options and controls
 
-Data collections can specify `options.result_storage` to deliver result parts to customer
-storage. Downloads require `options.storage` instead. Storage type/credentials use the
-[same destination schema](storage.md). Default result prefixes use the UTC creation date.
-Customer-delivered manifests and internal signed results have separate storage retention.
+Bulk uses `options`, rather than individual-query `params`. Metadata accepts
+`include_formats` and `include_chapters`; transcript/captions accept `language` and `auto`;
+license checks have no data options. These data sources can set `result_storage` to deliver
+result parts into customer storage. Downloads use `storage` instead of `result_storage`.
+
+`get(id)` returns status, counts, pause reason and delivery state. Expected states are
+`awaiting_upload`, `running`, `paused`, `finalizing`, `completed`, `failed`, and `cancelled`.
+`pause` requests a pause for running admission; already active items may finish. `resume`
+continues paused work after its blocking condition is resolved. `update` changes settings
+allowed by the current state, including supported storage credential patches. `cancel`
+stops remaining admission; completed/admitted work can already be charged.
+
+`wait` raises `JobPausedError` on a pause and `JobFailedError` on failure/cancellation.
+It does not resume, cancel, or repeat submissions automatically. Use saved IDs to continue
+reading after timeouts or process restarts.
+
+## Results and listing
+
+`manifest(id)` reads ordered part descriptors, counts and expiry. `part(id, number)` reads
+bounded raw bytes. `iterRows(id, number)` decodes one gzip/NDJSON part; `rows(id)` walks
+all manifest parts in order. It constructs API routes and does not follow arbitrary
+manifest hyperlinks. Part numbers are zero based. Decoding bounds total and per-line
+bytes and rejects malformed gzip/UTF-8/JSON. Export within the 24-hour result window.
+
+`list({cursor, limit})` returns `data` and `pagination`. `iterJobs({maxPages, limit})` yields
+jobs from a bounded number of pages and rejects missing/repeated continuation cursors.
+All iterators support request options with `signal` and `timeoutMs`.

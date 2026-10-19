@@ -1,23 +1,38 @@
-# Account and public discovery
+# Account, pricing and service discovery
+
+Read current access and plan limits before scaling. These endpoints are free but rate
+limited. Credit balances and plan ceilings are shared by account keys; usage is scoped
+to the API key making the request.
 
 ```javascript
-import { FlashData } from "../dist/index.js";
-const client = new FlashData();
-console.log(await client.account.access());
-console.log(await client.account.balance());
-console.log(await client.account.pricing({source: "google_search", request_count: 10}));
-console.log(await client.account.limits());
-console.log(await client.account.usage({source: "google_search", from: "2026-01-01T00:00:00Z", to: "2026-01-02T00:00:00Z"}));
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const access = await client.account.access();
+const balance = await client.account.balance();
+const prices = await client.account.pricing({ source: 'youtube_metadata', request_count: 100 });
+const limits = await client.account.limits();
+const usage = await client.account.usage({ source: 'youtube_metadata' });
+console.log(access.sources, balance.availableCredits, limits.limits);
+console.log(prices.prices, usage.totals);
 ```
 
-These reads spend no query Credits. Access/balance/pricing/limits share the server's
-120 reads/minute per client IP limit. Usage has its own limit and freshness information.
-Responses are scoped to the key's authorized sources. Balance, pricing and limits are
-snapshots, not an admission reservation. Pricing uses request counts, not result counts;
-Extended Search has a separate rate and downloads expose a per-TB rate.
+Pricing estimates are for calls, rather than returned search hits. `request_count` is
+1–100000. Download billing uses actual uploaded bytes, so request count does not estimate
+its cost. Query current prices rather than hard-coding examples. `usage` also accepts
+ISO 8601 `from` and `to` strings; the server validates the range and totals may lag work.
+Concurrency is a ceiling, not currently available slots.
 
-`public.sources`, `public.plans`, `public.status` and `public.health` omit the key header.
-Public discovery can be used through a client configured with a key placeholder, while
-normal authenticated methods require a valid FlashData key. Key creation, checkout,
-login/session and admin functions remain console operations; these SDKs cover the
-developer API-key contract, not browser-cookie workflows.
+Public discovery needs no key:
+
+```javascript
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: '' });
+console.log((await client.public.sources()).data.map((source) => source.id));
+console.log((await client.public.health()).status);
+```
+
+`public.plans()` returns public USD plan data; `public.status()` returns components.
+Public requests never include the client's key. Authenticated account, job and bulk
+requests always require one. Request options are the last argument of each method.

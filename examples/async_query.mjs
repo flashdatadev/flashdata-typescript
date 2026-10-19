@@ -1,6 +1,31 @@
-import { FlashData } from '../dist/index.js';
-const client = new FlashData();
-const receipt = await client.queries.submit({source: 'youtube_metadata', video_id: 'dQw4w9WgXcQ'});
-console.log('Save this job ID:', receipt.id);
-await client.jobs.wait(receipt.id, {timeoutMs: 300000, pollIntervalMs: 2000});
-console.log(await client.jobs.result(receipt.id));
+/** Submit a background search or resume an existing ID, then export results. */
+import { FlashData } from '@flashdata-dev/sdk';
+import { command, integerOption, isMain, run, saveJSON } from './_support.mjs';
+export async function main(argv = process.argv.slice(2)) {
+  const args = command('Background search with recovery', argv, {
+    'job-id': { type: 'string' },
+    'wait-timeout-ms': { type: 'string', default: '300000' },
+  });
+  if (!args) return;
+  const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+  let id = args.values['job-id'];
+  if (!id) {
+    const receipt = await client.google.search(
+      { query: args.positionals[0] ?? 'coffee', num: 3 },
+      { mode: 'async' },
+    );
+    id = receipt.id;
+    console.log('Save this job ID:', id);
+    await saveJSON(receipt, args.values.output);
+  }
+  await client.jobs.wait(id, {
+    timeoutMs: integerOption(args.values['wait-timeout-ms'], '--wait-timeout-ms', 1, 2147483647),
+    pollIntervalMs: 3000,
+  });
+  const response = await client.jobs.result(id);
+  console.log('Completed:', id);
+  for (const payload of response.results)
+    for (const hit of payload.organic ?? []) console.log(hit.title ?? '', hit.link ?? '');
+  await saveJSON(response, args.values.output);
+}
+if (isMain(import.meta.url)) await run(main);

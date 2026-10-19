@@ -1,0 +1,27 @@
+name: Explicit live API checks
+on:
+  workflow_dispatch:
+    inputs:
+      run_paid_queries:
+        description: Run paid realtime, background, batch and bulk metadata requests
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  live:
+    if: inputs.run_paid_queries
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run test:live
+        env:
+          FLASHDATA_RUN_LIVE: '1'
+          FLASHDATA_LIVE_API_KEY: ${{ secrets.FLASHDATA_LIVE_API_KEY }}

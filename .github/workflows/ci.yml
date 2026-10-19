@@ -10,17 +10,19 @@ jobs:
         node: ['22', '24']
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
+      - run: npm run format:check
       - run: npm run typecheck
       - run: npm test
       - run: npm run examples:offline
-      - run: npm pack
+      - run: npm run docs:build
+      - run: npm run verify:package
       - uses: actions/upload-artifact@v4
         with:
           name: package-${{ matrix.os }}-${{ matrix.node }}
-          path: '*.tgz'
+          path: 'artifacts/*.tgz'
