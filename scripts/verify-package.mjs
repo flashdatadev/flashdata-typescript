@@ -29,6 +29,7 @@ const packed = JSON.parse(
   ]),
 )[0];
 assert(packed.files.some((file) => file.path === 'dist/index.d.cts'));
+assert(packed.files.some((file) => file.path === 'README.zh-CN.md'));
 assert(packed.files.some((file) => file.path === 'examples/bulk_download.mjs'));
 assert(packed.files.some((file) => file.path === 'src/client.ts'));
 for (const file of packed.files) {

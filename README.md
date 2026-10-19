@@ -1,5 +1,7 @@
 # FlashData TypeScript & JavaScript SDK
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 [FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
 
 Google search results and YouTube data for Node.js applications, search monitoring,

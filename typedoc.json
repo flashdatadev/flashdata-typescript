@@ -3,6 +3,7 @@
   "name": "FlashData TypeScript & JavaScript SDK",
   "entryPoints": ["src/index.ts"],
   "projectDocuments": [
+    "README.zh-CN.md",
     "docs/**/*.md",
     "examples/README.md",
     "CONTRIBUTING.md",

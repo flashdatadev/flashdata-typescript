@@ -38,10 +38,10 @@ SerpApi-specific engines, markdown conversion and archive APIs are not FlashData
 
 Validated locally on Windows with Node.js 24.19.0 and TypeScript 5.9.3:
 
-- **195 offline checks passed**, with 19 live checks skipped by default. Coverage includes
+- **200 offline checks passed**, with 19 live checks skipped by default. Coverage includes
   all 15 source contracts, bulk controls, native fetch against two loopback origins,
   streamed input upload, signed result isolation, bounded decoding, cancellation and recovery.
-- **33 documentation code blocks execute** against source-shaped fixtures. TypeScript
+- **38 documentation code blocks execute** against source-shaped fixtures. TypeScript
   blocks also compile strictly. Relative links and every source parameter are checked.
 - **27 runnable examples** support import safety and help without a key. Source and
   workflow checks verify exports, saved IDs, partial bulk results and resume paths.

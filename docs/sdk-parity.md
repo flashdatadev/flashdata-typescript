@@ -53,6 +53,10 @@ receipts; they do not promise the realtime envelope's `created_at` field.
 
 ## Documentation and examples
 
+Both repositories provide English and Simplified Chinese READMEs with language-switch
+links. The Chinese versions retain the complete API examples and bulk download workflow;
+all localized Python/JavaScript blocks execute in the offline documentation checks.
+
 Both READMEs explain what FlashData does, who the APIs serve, source installation,
 explicit keys, working queries, result traversal, background jobs, bulk media delivery,
 errors, API coverage and development. Both include destination JSON and the complete
@@ -82,15 +86,15 @@ The 2026-10-20 alignment checks passed locally on Windows with Python 3.12.14 an
 
 | Verification                    | Python                                                                              | TypeScript                                                              |
 | ------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Offline tests                   | 301 passed; live checks skipped by default                                          | 195 passed; live checks skipped by default                              |
-| Executable documentation blocks | 34 Python blocks                                                                    | 33 JavaScript/TypeScript blocks; typed blocks also compile              |
+| Offline tests                   | 307 passed; live checks skipped by default                                          | 200 passed; live checks skipped by default                              |
+| Executable documentation blocks | 40 Python blocks                                                                    | 38 JavaScript/TypeScript blocks; typed blocks also compile              |
 | Runnable examples               | 25, including discovery and bulk downloads                                          | 27, including typed and CommonJS examples                               |
 | Formatting and types            | Ruff and mypy pass                                                                  | Prettier and strict TypeScript pass                                     |
 | Generated documentation         | Sphinx builds with warnings as errors                                               | TypeDoc builds with warnings as errors                                  |
 | Clean package consumer          | Wheel installs; sync/async, mypy and offline example pass; source archive inspected | npm archive installs; ESM/CommonJS runtime and strict declarations pass |
 | Live public discovery           | All four endpoints pass without a key                                               | All four endpoints pass without a key                                   |
 
-All 73 guide/root Markdown pages have official navigation links. All 18 distinct linked
+All 75 guide/root Markdown pages have official navigation links. All 18 distinct linked
 FlashData URLs returned HTTP 200, including every source guide, the homepage, API docs
 and pricing. API/schema snapshots match, and all 46 methods match between Python sync,
 Python async and TypeScript resources. Each project documents repeatable checks in the

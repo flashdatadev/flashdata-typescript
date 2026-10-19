@@ -177,6 +177,7 @@ async function markdown(directory) {
 }
 const pages = [
   join(root, 'README.md'),
+  join(root, 'README.zh-CN.md'),
   join(root, 'CONTRIBUTING.md'),
   join(root, 'examples/README.md'),
   ...(await markdown(join(root, 'docs'))),
