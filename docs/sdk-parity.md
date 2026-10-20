@@ -2,7 +2,7 @@
 
 [FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
 
-Both local 0.1.0 release candidates implement the same FlashData developer APIs. The
+Both local 1.0.0 release candidates implement the same FlashData developer APIs. The
 comparison checks API contracts, resource methods, source guides, runnable examples,
 bulk recovery, packaging and official website links. Language conventions remain idiomatic.
 

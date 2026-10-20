@@ -13,7 +13,7 @@ node examples/offline.mjs
 ```
 
 Create a local npm archive with `npm pack`, then install that file in another application
-with `npm install /absolute/path/to/flashdata-dev-sdk-0.1.0.tgz`. No registry release is
+with `npm install /absolute/path/to/flashdata-dev-sdk-1.0.0.tgz`. No registry release is
 required for this workflow. Examples import `@flashdata-dev/sdk`; after a build, that
 same package import works from inside this checkout through Node's package self-reference.
 

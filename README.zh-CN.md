@@ -36,7 +36,7 @@ npm run build
 # 在本仓库中执行
 npm pack
 # 在你的应用中执行
-npm install /absolute/path/to/flashdata-dev-sdk-0.1.0.tgz
+npm install /absolute/path/to/flashdata-dev-sdk-1.0.0.tgz
 ```
 
 当前版本通过源码安装。正式使用 FlashData 官方账号发布后，会补充 npm 注册表安装说明。

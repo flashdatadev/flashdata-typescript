@@ -5,4 +5,4 @@ export type { PollOptions, SourceRequestOptions, BulkManifest } from './resource
 export * from './types.js';
 export * from './errors.js';
 export { sources as SOURCES } from './common.js';
-export const VERSION = '0.1.0';
+export const VERSION = '1.0.0';

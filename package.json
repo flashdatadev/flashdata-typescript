@@ -1,6 +1,6 @@
 {
   "name": "@flashdata-dev/sdk",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Official TypeScript and JavaScript SDK for FlashData Google, YouTube and cloud media APIs",
   "type": "module",
   "main": "./dist/index.cjs",

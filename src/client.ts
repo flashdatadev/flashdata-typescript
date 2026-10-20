@@ -163,7 +163,7 @@ export class FlashData {
       if (v !== undefined) url.searchParams.set(k, String(v));
     const headers: Record<string, string> = {
       Accept: 'application/json',
-      'User-Agent': 'flashdata-typescript/0.1.0',
+      'User-Agent': 'flashdata-typescript/1.0.0',
     };
     if (!options.public) headers['X-API-Key'] = this.#key;
     if (options.body !== undefined) headers['Content-Type'] = 'application/json';

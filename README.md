@@ -39,7 +39,7 @@ For another application, create and install a local package:
 # In this repository
 npm pack
 # In your application
-npm install /absolute/path/to/flashdata-dev-sdk-0.1.0.tgz
+npm install /absolute/path/to/flashdata-dev-sdk-1.0.0.tgz
 ```
 
 This version is available from source. npm registry installation instructions will be

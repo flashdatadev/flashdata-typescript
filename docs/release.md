@@ -4,7 +4,7 @@
 
 ## Final local release check — 2026-10-20
 
-The 0.1.0 release candidate passes the local release checks below. English `README.md`
+The 1.0.0 release candidate passes the local release checks below. English `README.md`
 remains the default, with a visible 简体中文 link to the complete Chinese README.
 
 | Check                        | Result                                                                                          |
