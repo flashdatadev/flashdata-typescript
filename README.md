@@ -26,24 +26,12 @@ See the [API documentation](https://flashdata.dev/docs) and [pricing](https://fl
 
 ## Install
 
-From this repository checkout:
-
 ```sh
-npm ci
-npm run build
+npm install @flashdata-dev/sdk
 ```
 
-For another application, create and install a local package:
-
-```sh
-# In this repository
-npm pack
-# In your application
-npm install /absolute/path/to/flashdata-dev-sdk-1.0.0.tgz
-```
-
-This version is available from source. npm registry installation instructions will be
-added after release under FlashData's official account. Run the SDK on your server.
+This command requires FlashData's official npm publication. For local testing before
+release, use [installation from source](#install-from-source). Run the SDK on your server.
 
 For a TypeScript application, also install the compiler and Node.js types as development
 dependencies; the SDK includes its own API types:
@@ -51,6 +39,8 @@ dependencies; the SDK includes its own API types:
 ```sh
 npm install --save-dev typescript@~5.9.3 @types/node@^22
 ```
+
+## Configure your API key
 
 Obtain a key from your [FlashData account](https://flashdata.dev) and pass it through
 `apiKey`. Examples read it using `process.env.FLASHDATA_API_KEY`; a key supplied by your
@@ -259,6 +249,24 @@ with no account or network. All scripts support `--help` and do no network work 
 
 The [SDK comparison](docs/sdk-parity.md) maps Python and TypeScript coverage, language
 differences, workflow guarantees, and verification limits side by side.
+
+## Install from source
+
+From this repository checkout:
+
+```sh
+npm ci
+npm run build
+```
+
+For another application, create and install a local package:
+
+```sh
+# In this repository
+npm pack
+# In your application
+npm install /absolute/path/to/flashdata-dev-sdk-1.0.0.tgz
+```
 
 ## Development
 

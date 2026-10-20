@@ -23,23 +23,11 @@ SDK 提供请求与响应类型、参数校验、结构化错误、限制页数�
 
 ## 安装
 
-在本仓库的源码目录中执行：
-
 ```sh
-npm ci
-npm run build
+npm install @flashdata-dev/sdk
 ```
 
-如需在另一个应用中使用，可创建并安装本地安装包：
-
-```sh
-# 在本仓库中执行
-npm pack
-# 在你的应用中执行
-npm install /absolute/path/to/flashdata-dev-sdk-1.0.0.tgz
-```
-
-当前版本通过源码安装。正式使用 FlashData 官方账号发布后，会补充 npm 注册表安装说明。
+以上命令需在 FlashData 正式发布到 npm 后使用。发布前的本地测试请参阅[从源码安装](#从源码安装)。
 请在服务端运行 SDK。
 
 TypeScript 应用还需将编译器和 Node.js 类型定义安装为开发依赖。SDK 自身的 API 类型已随包提供：
@@ -47,6 +35,8 @@ TypeScript 应用还需将编译器和 Node.js 类型定义安装为开发依赖
 ```sh
 npm install --save-dev typescript@~5.9.3 @types/node@^22
 ```
+
+## 配置 API 密钥
 
 从你的 [FlashData 账户](https://flashdata.dev)获取 API 密钥，并通过 `apiKey` 显式传入。
 示例使用 `process.env.FLASHDATA_API_KEY` 读取环境变量，也可以使用密钥管理服务提供的值。
@@ -251,6 +241,24 @@ npm run examples:typescript -- coffee
 真实 API 示例会消耗积分。`node examples/offline.mjs` 使用模拟请求，无需账户或网络。
 所有脚本支持 `--help`，导入模块时不会发起请求。
 [SDK 对照说明](docs/sdk-parity.md)列出了 Python 与 TypeScript 的 API 覆盖、语言差异、工作流行为和验证范围。
+
+## 从源码安装
+
+在本仓库的源码目录中执行：
+
+```sh
+npm ci
+npm run build
+```
+
+如需在另一个应用中使用，可创建并安装本地安装包：
+
+```sh
+# 在本仓库中执行
+npm pack
+# 在你的应用中执行
+npm install /absolute/path/to/flashdata-dev-sdk-1.0.0.tgz
+```
 
 ## 开发
 
