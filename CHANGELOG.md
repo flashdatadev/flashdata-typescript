@@ -12,6 +12,8 @@ failures, documented Python/TypeScript parity, and linked every guide to officia
 
 ## 1.0.0 — local release candidate
 
+- Fixed polling deadline errors for standard and bulk jobs when status timers fire early.
+  Shorter client network timeouts keep their original error type.
 - All 15 Google and YouTube sources, source validation and typed requests.
 - Realtime queries, background submissions, mixed batches and bounded Google pagination.
 - Job readers, signed results and explicit bounded polling.

@@ -4,6 +4,7 @@ import { gzipSync } from 'node:zlib';
 import { mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { performance } from 'node:perf_hooks';
 import {
   FlashData,
   APIError,
@@ -13,6 +14,7 @@ import {
   RequestAbortedError,
   SubmissionUnknownError,
   PollingTimeoutError,
+  RequestTimeoutError,
 } from '../dist/index.js';
 
 const JOB = 'job_regression123',
@@ -134,6 +136,41 @@ test('a status request consuming the polling deadline reports a polling timeout'
   }
   assert.equal(calls.length, 1);
 });
+for (const [resource, id, route] of [
+  ['jobs', JOB, '/jobs/'],
+  ['bulk', BULK, '/bulk-jobs/'],
+]) {
+  for (const [label, networkTimeoutMs, elapsed, pollingTimeout] of [
+    ['polling budget expires before the high-resolution deadline', 100, 18.5, true],
+    ['shorter network timeout is preserved', 5, 4, false],
+    ['delayed network timeout exceeds the polling deadline', 5, 21, true],
+  ]) {
+    test(`${resource}: ${label}`, async (t) => {
+      let now = 100;
+      let clockReads = 0;
+      t.mock.method(performance, 'now', () => now + (clockReads++ === 0 ? 0 : 0.25));
+      const { client } = setup(() => assert.fail('Unexpected fetch'), {
+        timeoutMs: networkTimeoutMs,
+      });
+      const timeout = new RequestTimeoutError('Status read timed out.');
+      const request = t.mock.method(client, '_request', async (method, path, options) => {
+        assert.equal(method, 'GET');
+        assert.equal(path, route + id);
+        assert(Number.isInteger(options.timeoutMs) && options.timeoutMs > 0);
+        assert(options.timeoutMs <= networkTimeoutMs);
+        now += elapsed;
+        throw timeout;
+      });
+      await assert.rejects(client[resource].wait(id, { timeoutMs: 20 }), (error) =>
+        pollingTimeout
+          ? error instanceof PollingTimeoutError && error.jobId === id
+          : error === timeout,
+      );
+      assert.equal(request.mock.callCount(), 1);
+    });
+  }
+}
+
 test('malformed job envelopes never return undefined or leak TypeErrors', async () => {
   for (const envelope of [{}, { job: null }, { job: [] }]) {
     const { client } = setup(() => json(envelope));

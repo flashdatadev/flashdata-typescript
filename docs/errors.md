@@ -52,5 +52,8 @@ is promised by this SDK.
 
 Read retries can use application-controlled backoff and a bounded budget. Respect
 `retryAfter`. Polling stops on network/API errors instead of hiding them behind more calls.
+A status read limited by the remaining polling budget raises `PollingTimeoutError` with
+the existing job ID. A shorter client network timeout raises `RequestTimeoutError` while
+the overall polling budget remains available.
 Signals already aborted before dispatch send nothing; cancellation after mutation dispatch
 is an unknown outcome. See [configuration](client.md) for examples.

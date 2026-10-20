@@ -52,12 +52,13 @@ class Resource {
         );
       const remaining = deadline - performance.now();
       if (remaining <= 0) throw new PollingTimeoutError(id);
+      const pollingDeadlineLimitsRequest = remaining <= this.client.timeoutMs;
       let job: T;
       try {
         job = jobRecord<T>(
           await this.client._request('GET', (bulk ? '/bulk-jobs/' : '/jobs/') + id, {
             ...options,
-            timeoutMs: Math.max(1, Math.floor(Math.min(remaining, this.client.timeoutMs))),
+            timeoutMs: Math.max(1, Math.ceil(Math.min(remaining, this.client.timeoutMs))),
           }),
         );
       } catch (error) {
@@ -66,7 +67,11 @@ class Resource {
             'Polling was cancelled locally; accepted work continues.',
             id,
           );
-        if (error instanceof RequestTimeoutError && performance.now() >= deadline - 1)
+        // Timers can fire early; use the budget that limited the status request.
+        if (
+          error instanceof RequestTimeoutError &&
+          (pollingDeadlineLimitsRequest || performance.now() >= deadline)
+        )
           throw new PollingTimeoutError(id);
         throw error;
       }
