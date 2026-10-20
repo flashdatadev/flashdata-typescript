@@ -1,6 +1,6 @@
 # FlashData TypeScript 与 JavaScript SDK
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[English](https://github.com/flashdatadev/flashdata-typescript/blob/main/README.md) | [简体中文](https://github.com/flashdatadev/flashdata-typescript/blob/main/README.zh-CN.md)
 
 [FlashData](https://flashdata.dev) · [API 文档](https://flashdata.dev/docs)
 

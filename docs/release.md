@@ -31,15 +31,16 @@ checks runtime/distribution version agreement and both packaged README contents.
 No paid requests were repeated for this release check; earlier integration evidence is
 recorded in [validation](validation.md). Successful customer cloud writes, external
 webhook delivery, live pause/resume transitions and the Linux/hosted CI matrix remain
-unverified. No repository, package or documentation site was published. Official owner
-URLs and package-name ownership must be set before release.
+unverified. No repository, package or documentation site was published by that local
+check. Package-name ownership must be confirmed before release.
 
 ## Before publication
 
-This project stays local until the official FlashData GitHub and npm accounts are ready.
+The GitHub source repository is [flashdatadev/flashdata-typescript](https://github.com/flashdatadev/flashdata-typescript).
 The planned package name is `@flashdata-dev/sdk`; verify ownership before publishing.
+GitHub pushes and CI checks do not publish packages.
 
-1. Set repository and issue metadata to the actual official URLs once they exist.
+1. Confirm repository and issue metadata points to the official repository.
 2. Review contracts, license, contact details, changelog and validation evidence.
 3. Run `npm ci`, `npm run typecheck`, `npm test`, `npm run format:check`, and `npm run docs:build`.
 4. Run `npm run verify:package` to build an archive in `artifacts/`, check its contents,

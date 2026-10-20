@@ -40,6 +40,13 @@
   "license": "MIT",
   "author": "FlashData <support@flashdata.dev>",
   "homepage": "https://flashdata.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flashdatadev/flashdata-typescript.git"
+  },
+  "bugs": {
+    "url": "https://github.com/flashdatadev/flashdata-typescript/issues"
+  },
   "keywords": [
     "flashdata",
     "sdk",
