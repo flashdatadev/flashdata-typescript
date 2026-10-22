@@ -24,6 +24,21 @@ Use realtime requests, background jobs, mixed batches, or bulk video ID files to
 workload. Media downloads deliver audio or video into your own cloud storage.
 See the [API documentation](https://flashdata.dev/docs) and [pricing](https://flashdata.dev/pricing).
 
+## Choose a workflow
+
+| What you want to build                           | Start here                                                      |
+| ------------------------------------------------ | --------------------------------------------------------------- |
+| Web context and source links for an AI assistant | [Google search](#search-google)                                 |
+| Industry research or news monitoring             | [News search](#follow-industry-news)                            |
+| Video discovery for a topic or learning resource | [YouTube search](#find-youtube-videos-about-a-topic)            |
+| Video analytics and catalog enrichment           | [Video metadata](#get-a-videos-metadata)                        |
+| Text for video summaries, search or retrieval    | [Existing transcripts](#get-transcript-text-for-an-ai-workflow) |
+| A dataset from a list of video IDs               | [Bulk metadata export](#build-a-youtube-metadata-dataset)       |
+| MP4 files delivered to your own cloud bucket     | [Bulk media download](#download-youtube-videos-in-bulk)         |
+
+The examples below show API data collection. Your application supplies any summarization,
+indexing, scheduling or AI model calls.
+
 ## Install
 
 ```sh
@@ -58,6 +73,16 @@ export FLASHDATA_API_KEY="YOUR_API_KEY"
 $env:FLASHDATA_API_KEY = "YOUR_API_KEY"
 ```
 
+Each code block below is a standalone example. After installing and setting your API key,
+save a block as `quickstart.mjs` and run:
+
+```sh
+node quickstart.mjs
+```
+
+The `.mjs` extension runs these ESM examples directly in Node.js. For TypeScript project
+configuration and compilation, see the [TypeScript guide](docs/typescript.md).
+
 ## Search Google
 
 ```javascript
@@ -80,6 +105,84 @@ for (const payload of response.results) {
 Responses are ordinary objects. The outer `results` array contains source payloads;
 Google web hits are inside each payload's `organic` list. Charged credits are in
 `response.usage.credits`. Other sources have their own field paths.
+
+## Follow industry news
+
+Collect headlines, publishers and article links for a research tool or monitoring script.
+
+```javascript
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const response = await client.google.news({
+  query: 'battery recycling',
+  gl: 'us',
+  hl: 'en',
+  num: 5,
+});
+for (const payload of response.results) {
+  for (const article of payload.news ?? []) {
+    console.log(article.title, article.source, article.link);
+  }
+}
+```
+
+## Find YouTube videos about a topic
+
+Discover relevant videos and get IDs you can pass to metadata or transcript requests.
+
+```javascript
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const response = await client.youtube.search({ query: 'python tutorial', max_results: 5 });
+for (const payload of response.results) {
+  for (const video of payload.results ?? []) {
+    console.log(video.videoId, video.title, video.channel);
+  }
+}
+```
+
+## Get a video's metadata
+
+Enrich a video catalog with titles, channels, duration and view counts. Replace the example
+ID with a video you want to analyze.
+
+```javascript
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const response = await client.youtube.metadata({
+  video_id: 'dQw4w9WgXcQ',
+  include_formats: false,
+});
+for (const video of response.results) {
+  console.log(video.title, video.channel);
+  console.log('Seconds:', video.duration, 'Views:', video.viewCount);
+}
+```
+
+## Get transcript text for an AI workflow
+
+Read an existing English automatic caption track for your application to summarize or index.
+The API returns text; your application performs the summarization or embedding.
+
+```javascript
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const response = await client.youtube.transcript({
+  video_id: 'dQw4w9WgXcQ',
+  language: 'en',
+  auto: true,
+});
+for (const track of response.results) {
+  console.log(track.fullText ?? '');
+}
+```
+
+Transcripts depend on the language tracks available on the video; missing tracks are not
+transcribed or translated. For uploaded captions, use the `captions` example below.
 
 ## Read a YouTube caption track
 
@@ -124,6 +227,66 @@ Save IDs before waiting. `wait()` returns a completed job record; `result()` rea
 JSON output. A polling deadline or process restart does not require a new submission.
 Use `queries.batch()` for mixed queries; see [jobs and batch](docs/jobs.md).
 
+## Build a YouTube metadata dataset
+
+Create `video-ids.txt` with one YouTube video ID per line:
+
+```text
+dQw4w9WgXcQ
+jNQXAC9IVRw
+```
+
+This example creates the job, uploads the IDs, starts processing, waits, and exports
+NDJSON (one JSON object per line). Each row includes an input item's status and data.
+
+```javascript
+import { open } from 'node:fs/promises';
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const receipt = await client.bulk.create({
+  source: 'youtube_metadata',
+  options: { include_formats: false },
+});
+const bulkId = receipt.job.id;
+console.log('Save this bulk ID:', bulkId);
+await client.bulk.uploadFile(receipt, 'video-ids.txt');
+await client.bulk.start(bulkId);
+const completed = await client.bulk.wait(bulkId, {
+  timeoutMs: 3600000,
+  pollIntervalMs: 5000,
+});
+
+const output = await open('videos.ndjson', 'wx');
+try {
+  for await (const row of client.bulk.rows(bulkId)) {
+    await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
+  }
+} finally {
+  await output.close();
+}
+console.log('Saved videos.ndjson; counts:', completed.counts);
+if (completed.counts.failed || completed.counts.invalid) {
+  throw new Error('Some items failed; inspect the saved rows before retrying');
+}
+```
+
+Persist the printed job ID in your application before waiting. After a restart or timeout,
+use the [recovery flow](#recover-an-already-started-bulk-job) below instead of rerunning creation.
+The inline export uses exclusive creation and refuses to overwrite an existing file.
+
+For a ready-to-run script, run these commands from the repository root. It saves the job
+record to `OUTPUT.job.json` before upload and preserves exports with per-item failures:
+
+```sh
+node examples/bulk.mjs video-ids.txt --output artifacts/videos.ndjson
+node examples/bulk.mjs --bulk-id bulk_YOUR_SAVED_ID --output artifacts/videos-recovered.ndjson
+```
+
+The create and recovery commands are separate runs; use the second only when recovering,
+and replace the saved ID. Other bulk sources include `youtube_transcript`, `youtube_captions`
+and `youtube_trainability`; each job applies one set of options to all IDs. See [bulk options](docs/bulk.md).
+
 ## Download YouTube videos in bulk
 
 Create `video-ids.txt` with one 11-character ID per line:
@@ -149,7 +312,7 @@ Create a private `private-storage.json` file for your destination. For example, 
 Create the task, upload the file, start processing, and read per-video status:
 
 ```javascript
-import { readFile } from 'node:fs/promises';
+import { readFile, open } from 'node:fs/promises';
 import { FlashData } from '@flashdata-dev/sdk';
 
 const storage = JSON.parse(await readFile('private-storage.json', 'utf8'));
@@ -169,10 +332,22 @@ await client.bulk.uploadFile(receipt, 'video-ids.txt');
 await client.bulk.start(bulkId);
 const completed = await client.bulk.wait(bulkId, { timeoutMs: 3600000, pollIntervalMs: 5000 });
 console.log('Counts:', completed.counts);
-for await (const row of client.bulk.rows(bulkId)) {
-  console.log(row.video_id, row.status);
+const output = await open('downloads.ndjson', 'wx');
+try {
+  for await (const row of client.bulk.rows(bulkId)) {
+    await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
+    console.log(row.video_id, row.status);
+  }
+} finally {
+  await output.close();
+}
+if (completed.counts.failed || completed.counts.invalid) {
+  throw new Error('Some items failed; inspect downloads.ndjson before retrying');
 }
 ```
+
+The inline program saves delivery receipts to `downloads.ndjson` and refuses to overwrite
+an existing file. Item failures are reported after receipts have been saved.
 
 Media is delivered into your configured bucket. `bulk.rows()` reads JSON result records
 with each video's status and source output in `results`; it does not download media files
@@ -184,11 +359,53 @@ example saves the job ID and exports NDJSON, and can resume without creating ano
 
 ```sh
 node examples/bulk_download.mjs video-ids.txt --storage-file private-storage.json --output artifacts/downloads.ndjson
-node examples/bulk_download.mjs --bulk-id bulk_YOUR_SAVED_ID --output artifacts/downloads.ndjson
+node examples/bulk_download.mjs --bulk-id bulk_YOUR_SAVED_ID --output artifacts/downloads-recovered.ndjson
 ```
+
+Run the second command only to recover an already started job, replacing the saved ID.
+Use a fresh output path to retain any previous export.
 
 See [bulk controls and recovery](docs/bulk.md), [download options](docs/sources/youtube_download.md),
 and [supported storage providers](docs/storage.md).
+
+## Recover an already started bulk job
+
+Replace `bulk_YOUR_SAVED_ID` with the ID printed and saved from either the metadata or
+download task. This flow only waits for and reads existing work: no creation, upload or
+new download submission.
+
+```javascript
+import { open } from 'node:fs/promises';
+import { FlashData } from '@flashdata-dev/sdk';
+
+const bulkId = 'bulk_YOUR_SAVED_ID';
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const completed = await client.bulk.wait(bulkId, {
+  timeoutMs: 3600000,
+  pollIntervalMs: 5000,
+});
+const output = await open('recovered.ndjson', 'wx');
+try {
+  for await (const row of client.bulk.rows(bulkId)) {
+    await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
+  }
+} finally {
+  await output.close();
+}
+console.log('Saved recovered.ndjson; counts:', completed.counts);
+if (completed.counts.failed || completed.counts.invalid) {
+  throw new Error('Some items failed; inspect the saved rows before retrying');
+}
+```
+
+A polling timeout stops local waiting; accepted server work continues. An `awaiting_upload`
+job still needs the original upload descriptor and an explicit `start`; a paused job needs
+its cause fixed and an explicit `resume`. The example job records omit signed upload
+descriptors, so an ID alone cannot recover a process interrupted before upload. Keep storage
+credentials and signed URLs out of ordinary job records.
+
+Export promptly: internal results are retained for 24 hours after completion. See
+[bulk controls and recovery](docs/bulk.md).
 
 ## Handle failures and cancellation
 

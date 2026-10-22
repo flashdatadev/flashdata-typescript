@@ -21,6 +21,20 @@ SDK 提供请求与响应类型、参数校验、结构化错误、限制页数�
 媒体下载会将音频或视频直接交付到你自己的云存储。
 详情见 [API 文档](https://flashdata.dev/docs)和[价格说明](https://flashdata.dev/pricing)。
 
+## 按使用场景选择工作流
+
+| 想要构建的功能                     | 从这里开始                                   |
+| ---------------------------------- | -------------------------------------------- |
+| 为 AI 助手提供网页上下文和来源链接 | [Google 搜索](#搜索-google)                  |
+| 行业研究或新闻监控                 | [新闻搜索](#跟踪行业新闻)                    |
+| 按主题发现视频或学习资源           | [YouTube 搜索](#按主题查找-youtube-视频)     |
+| 视频分析和内容目录补全             | [视频元数据](#获取视频元数据)                |
+| 为视频摘要、搜索或检索获取文本     | [已有字幕文本](#为-ai-工作流获取字幕文本)    |
+| 根据一组视频 ID 构建数据集         | [批量元数据导出](#构建-youtube-元数据数据集) |
+| 将 MP4 文件交付到自己的云存储桶    | [批量媒体下载](#批量下载-youtube-视频)       |
+
+以下示例负责通过 API 获取数据；摘要生成、索引、定时调度和 AI 模型调用由你的应用实现。
+
 ## 安装
 
 ```sh
@@ -51,6 +65,15 @@ export FLASHDATA_API_KEY="YOUR_API_KEY"
 $env:FLASHDATA_API_KEY = "YOUR_API_KEY"
 ```
 
+下面的代码块都是独立示例。完成安装并设置 API 密钥后，将任一代码块保存为 `quickstart.mjs`，然后运行：
+
+```sh
+node quickstart.mjs
+```
+
+使用 `.mjs` 可直接在 Node.js 中运行 ESM 示例。TypeScript 项目的配置及编译方式见
+[TypeScript 指南](docs/typescript.md)。
+
 ## 搜索 Google
 
 ```javascript
@@ -73,6 +96,83 @@ for (const payload of response.results) {
 响应是普通对象。外层 `results` 数组包含各数据源的结果对象；
 Google 网页搜索条目位于其中的 `organic` 列表中。
 本次请求消耗的积分（Credits）位于 `response.usage.credits`。其他数据源使用各自的字段路径。
+
+## 跟踪行业新闻
+
+收集行业新闻的标题、发布来源和文章链接，供研究工具或监控脚本使用。
+
+```javascript
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const response = await client.google.news({
+  query: 'battery recycling',
+  gl: 'us',
+  hl: 'en',
+  num: 5,
+});
+for (const payload of response.results) {
+  for (const article of payload.news ?? []) {
+    console.log(article.title, article.source, article.link);
+  }
+}
+```
+
+## 按主题查找 YouTube 视频
+
+发现相关视频，并获取可用于后续元数据或字幕请求的视频 ID。
+
+```javascript
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const response = await client.youtube.search({ query: 'python tutorial', max_results: 5 });
+for (const payload of response.results) {
+  for (const video of payload.results ?? []) {
+    console.log(video.videoId, video.title, video.channel);
+  }
+}
+```
+
+## 获取视频元数据
+
+补全视频目录中的标题、频道、时长和播放量。请将示例 ID 替换为你要处理的视频 ID。
+
+```javascript
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const response = await client.youtube.metadata({
+  video_id: 'dQw4w9WgXcQ',
+  include_formats: false,
+});
+for (const video of response.results) {
+  console.log(video.title, video.channel);
+  console.log('Seconds:', video.duration, 'Views:', video.viewCount);
+}
+```
+
+## 为 AI 工作流获取字幕文本
+
+读取已有的英文自动字幕文本，供应用生成摘要或建立检索索引。
+API 返回文本；摘要生成或向量化由你的应用完成。
+
+```javascript
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const response = await client.youtube.transcript({
+  video_id: 'dQw4w9WgXcQ',
+  language: 'en',
+  auto: true,
+});
+for (const track of response.results) {
+  console.log(track.fullText ?? '');
+}
+```
+
+字幕取决于视频已有的语言轨道；不会自动转写或翻译缺失的字幕。
+如需人工上传的字幕，可使用下面的 `captions` 示例。
 
 ## 读取 YouTube 字幕轨道
 
@@ -116,6 +216,65 @@ console.log(result);
 轮询超时或进程重启后，可继续读取同一任务，无需重新提交。
 不同查询可通过 `queries.batch()` 提交，详见[后台任务与批次](docs/jobs.md)。
 
+## 构建 YouTube 元数据数据集
+
+创建 `video-ids.txt`，每行填写一个 YouTube 视频 ID：
+
+```text
+dQw4w9WgXcQ
+jNQXAC9IVRw
+```
+
+以下示例完成创建任务 → 上传 ID → 启动 → 等待 → 导出 NDJSON（每行一个 JSON 对象）。
+每行包含一个输入条目的处理状态和数据。
+
+```javascript
+import { open } from 'node:fs/promises';
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const receipt = await client.bulk.create({
+  source: 'youtube_metadata',
+  options: { include_formats: false },
+});
+const bulkId = receipt.job.id;
+console.log('Save this bulk ID:', bulkId);
+await client.bulk.uploadFile(receipt, 'video-ids.txt');
+await client.bulk.start(bulkId);
+const completed = await client.bulk.wait(bulkId, {
+  timeoutMs: 3600000,
+  pollIntervalMs: 5000,
+});
+
+const output = await open('videos.ndjson', 'wx');
+try {
+  for await (const row of client.bulk.rows(bulkId)) {
+    await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
+  }
+} finally {
+  await output.close();
+}
+console.log('Saved videos.ndjson; counts:', completed.counts);
+if (completed.counts.failed || completed.counts.invalid) {
+  throw new Error('Some items failed; inspect the saved rows before retrying');
+}
+```
+
+等待之前，请在应用中持久化打印出的任务 ID。进程重启或超时后，使用下方的
+[恢复流程](#恢复已启动的批量任务)，不要重新运行创建代码。示例导出使用独占创建模式，拒绝覆盖已有文件。
+
+如需开箱即用的脚本，在仓库根目录运行以下命令。它会在上传前自动将任务记录保存到
+`OUTPUT.job.json`，并保留逐项失败的导出结果：
+
+```sh
+node examples/bulk.mjs video-ids.txt --output artifacts/videos.ndjson
+node examples/bulk.mjs --bulk-id bulk_YOUR_SAVED_ID --output artifacts/videos-recovered.ndjson
+```
+
+创建与恢复命令是两种不同的运行方式；仅在需要恢复时运行第二条命令，并替换任务 ID。
+其他批量来源包括 `youtube_transcript`、`youtube_captions` 和 `youtube_trainability`；
+每个任务共用一套选项。参数说明见[批量指南](docs/bulk.md)。
+
 ## 批量下载 YouTube 视频
 
 创建 `video-ids.txt`，每行一个 11 位视频 ID：
@@ -142,7 +301,7 @@ jNQXAC9IVRw
 然后创建任务、上传 ID 文件、启动处理并读取每个视频的状态：
 
 ```javascript
-import { readFile } from 'node:fs/promises';
+import { readFile, open } from 'node:fs/promises';
 import { FlashData } from '@flashdata-dev/sdk';
 
 const storage = JSON.parse(await readFile('private-storage.json', 'utf8'));
@@ -162,10 +321,22 @@ await client.bulk.uploadFile(receipt, 'video-ids.txt');
 await client.bulk.start(bulkId);
 const completed = await client.bulk.wait(bulkId, { timeoutMs: 3600000, pollIntervalMs: 5000 });
 console.log('Counts:', completed.counts);
-for await (const row of client.bulk.rows(bulkId)) {
-  console.log(row.video_id, row.status);
+const output = await open('downloads.ndjson', 'wx');
+try {
+  for await (const row of client.bulk.rows(bulkId)) {
+    await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
+    console.log(row.video_id, row.status);
+  }
+} finally {
+  await output.close();
+}
+if (completed.counts.failed || completed.counts.invalid) {
+  throw new Error('Some items failed; inspect downloads.ndjson before retrying');
 }
 ```
+
+以上程序将交付回执保存到 `downloads.ndjson`，并拒绝覆盖已有文件。
+逐项失败时会先保存回执，再报告错误。
 
 媒体交付到你配置的存储桶。`bulk.rows()` 读取包含视频状态和 `results` 数据源输出的 JSON 结果记录，
 不会把媒体文件下载到本机。请检查最终计数和每行状态：任务整体完成时，仍可能存在失败条目。
@@ -176,11 +347,48 @@ for await (const row of client.bulk.rows(bulkId)) {
 
 ```sh
 node examples/bulk_download.mjs video-ids.txt --storage-file private-storage.json --output artifacts/downloads.ndjson
-node examples/bulk_download.mjs --bulk-id bulk_YOUR_SAVED_ID --output artifacts/downloads.ndjson
+node examples/bulk_download.mjs --bulk-id bulk_YOUR_SAVED_ID --output artifacts/downloads-recovered.ndjson
 ```
+
+第二条命令仅用于恢复已启动的任务，请替换保存的任务 ID，并使用新输出路径保留之前的导出结果。
 
 尚处于 `awaiting_upload` 的草稿仍需上传文件并调用 `start`；暂停的任务需解决暂停原因后调用 `resume`。
 详见[批量控制与恢复](docs/bulk.md)、[下载选项](docs/sources/youtube_download.md)和[支持的存储服务商](docs/storage.md)。
+
+## 恢复已启动的批量任务
+
+将 `bulk_YOUR_SAVED_ID` 替换为元数据或下载任务先前打印并保存的 ID。
+此流程只等待和读取已有任务，不创建任务、不重新上传 ID，也不会重新提交下载。
+
+```javascript
+import { open } from 'node:fs/promises';
+import { FlashData } from '@flashdata-dev/sdk';
+
+const bulkId = 'bulk_YOUR_SAVED_ID';
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const completed = await client.bulk.wait(bulkId, {
+  timeoutMs: 3600000,
+  pollIntervalMs: 5000,
+});
+const output = await open('recovered.ndjson', 'wx');
+try {
+  for await (const row of client.bulk.rows(bulkId)) {
+    await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
+  }
+} finally {
+  await output.close();
+}
+console.log('Saved recovered.ndjson; counts:', completed.counts);
+if (completed.counts.failed || completed.counts.invalid) {
+  throw new Error('Some items failed; inspect the saved rows before retrying');
+}
+```
+
+等待超时只会停止本地轮询，已受理的服务端任务仍会继续。`awaiting_upload` 状态仍需
+原始上传描述和显式 `start`；已暂停任务需先修复原因，再调用 `resume`。示例任务记录不含签名上传描述，
+不能仅凭 ID 恢复上传前中断的进程。不要将存储凭据或签名 URL 写到普通任务记录中。
+
+请及时导出结果，内部结果在完成后保留 24 小时。详情见[批量控制与恢复](docs/bulk.md)。
 
 ## 处理错误与取消操作
 
