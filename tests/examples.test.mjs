@@ -19,6 +19,83 @@ const scripts = (await readdir(join(root, 'examples'))).filter(
 );
 const env = { ...process.env, FLASHDATA_API_KEY: 'offline-example-key' };
 
+test('bulk exports protect saved IDs and recover a lost start without replay', () =>
+  sandbox(async (directory) => {
+    const { bulkTask } = await import('../examples/_bulk.mjs');
+    const output = join(directory, 'export.ndjson');
+    const record = output + '.job.json';
+    let creations = 0;
+    const client = {
+      bulk: {
+        async create() {
+          creations++;
+          return { job: { id: 'bulk_saved123' }, upload: { href: 'private-upload-capability' } };
+        },
+        async uploadFile() {
+          assert.deepEqual(JSON.parse(await readFile(record, 'utf8')), { id: 'bulk_saved123' });
+        },
+        async start() {
+          throw new Error('simulated lost start response');
+        },
+        async wait() {
+          return { id: 'bulk_saved123', counts: { failed: 0, invalid: 0 } };
+        },
+        async *rows() {
+          yield { status: 'completed', video_id: 'dQw4w9WgXcQ' };
+        },
+      },
+    };
+    const args = {
+      values: { output, 'wait-timeout-ms': '1000' },
+      positionals: [join(directory, 'video-ids.txt')],
+    };
+    const request = async () => ({ source: 'youtube_metadata' });
+    await assert.rejects(bulkTask(client, args, request), /lost start/);
+    const accepted = await readFile(record, 'utf8');
+    for (const orphaned of [false, true]) {
+      if (orphaned) await rm(output);
+      await assert.rejects(bulkTask(client, args, request), /EEXIST/);
+      assert.equal(creations, 1);
+      assert.equal(await readFile(record, 'utf8'), accepted);
+    }
+    const recovered = join(directory, 'recovered.ndjson');
+    await bulkTask(
+      client,
+      {
+        values: { output: recovered, 'bulk-id': 'bulk_saved123', 'wait-timeout-ms': '1000' },
+        positionals: [],
+      },
+      request,
+    );
+    assert.equal(creations, 1);
+    assert.equal(JSON.parse((await readFile(recovered, 'utf8')).trim()).status, 'completed');
+  }));
+
+test('bulk exports report failed rows even when summary counts are zero', () =>
+  sandbox(async (directory) => {
+    const { bulkTask } = await import('../examples/_bulk.mjs');
+    const output = join(directory, 'failed.ndjson');
+    const client = {
+      bulk: {
+        async wait() {
+          return { id: 'bulk_saved123', counts: { failed: 0, invalid: 0 } };
+        },
+        async *rows() {
+          yield { status: 'invalid' };
+        },
+      },
+    };
+    await assert.rejects(
+      bulkTask(
+        client,
+        { values: { output, 'bulk-id': 'bulk_saved123', 'wait-timeout-ms': '1000' } },
+        async () => {},
+      ),
+      /failed or invalid/,
+    );
+    assert.equal(JSON.parse((await readFile(output, 'utf8')).trim()).status, 'invalid');
+  }));
+
 async function sandbox(run) {
   const directory = await mkdtemp(join(tmpdir(), 'flashdata-example-'));
   try {
@@ -105,6 +182,7 @@ for (const [script, args] of [
   ['concurrent_search.mjs', ['coffee', 'tea']],
   ['bulk.mjs', ['video-ids.txt']],
   ['bulk_download.mjs', ['video-ids.txt']],
+  ['bulk_download.mjs', ['video-ids.txt', '--audio']],
   ['commonjs.cjs', ['coffee']],
   ['search_to_csv.mjs', ['coffee']],
   ['pagination.mjs', ['coffee']],
@@ -117,7 +195,16 @@ for (const [script, args] of [
           ? 'csv'
           : 'json';
       const path = join(directory, 'output.' + extension);
-      assert(execute(script, [...args, '--output', path], directory, environment).trim());
+      assert(
+        execute(
+          script,
+          [...args, '--output', path],
+          directory,
+          args.includes('--audio')
+            ? { ...environment, FLASHDATA_TEST_EXPECT_AUDIO: '1' }
+            : environment,
+        ).trim(),
+      );
       const value = await readFile(path, 'utf8');
       assert(value.trim());
       if (extension === 'json') JSON.parse(value);

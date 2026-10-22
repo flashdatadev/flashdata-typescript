@@ -84,6 +84,21 @@ globalThis.fetch = async (input, init = {}) => {
     return json({ job: { id, status: 'completed' } });
   }
   if (path.includes('/bulk-jobs')) {
+    if (
+      init.method === 'POST' &&
+      path === '/v2/bulk-jobs' &&
+      process.env.FLASHDATA_TEST_EXPECT_AUDIO
+    ) {
+      const options = JSON.parse(init.body).options;
+      if (
+        options.download_type !== 'audio' ||
+        options.output_format !== 'mp3' ||
+        options.video_quality ||
+        !options.storage
+      ) {
+        throw new Error('Bulk audio example sent incorrect media options.');
+      }
+    }
     const job = {
       id: bulkId,
       source: 'youtube_metadata',

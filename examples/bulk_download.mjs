@@ -11,6 +11,7 @@ export async function main(argv = process.argv.slice(2)) {
       'bulk-id': { type: 'string' },
       'wait-timeout-ms': { type: 'string', default: '3600000' },
       'storage-file': { type: 'string' },
+      audio: { type: 'boolean', default: false },
     },
     '[video-ids.txt]',
   );
@@ -19,9 +20,9 @@ export async function main(argv = process.argv.slice(2)) {
   await bulkTask(client, args, async () => ({
     source: 'youtube_download',
     options: {
-      download_type: 'audio_video',
-      video_quality: '<=720',
-      output_format: 'mp4',
+      ...(args.values.audio
+        ? { download_type: 'audio', output_format: 'mp3' }
+        : { download_type: 'audio_video', video_quality: '<=720', output_format: 'mp4' }),
       storage: JSON.parse(
         await readFile(
           args.values['storage-file'] ??

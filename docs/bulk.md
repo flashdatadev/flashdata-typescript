@@ -11,27 +11,42 @@ license labels, and downloads. Search/channel/suggestions use individual queries
 Create `video-ids.txt` with one ID per line, then run:
 
 ```javascript
-import { mkdir, open } from 'node:fs/promises';
+import { open } from 'node:fs/promises';
 import { FlashData } from '@flashdata-dev/sdk';
 
 const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
-const receipt = await client.bulk.create({
-  source: 'youtube_metadata',
-  options: { include_formats: false },
-});
-const id = receipt.job.id;
-console.log('Save this bulk ID:', id);
-await client.bulk.uploadFile(receipt, 'video-ids.txt');
-await client.bulk.start(id);
-const completed = await client.bulk.wait(id, { timeoutMs: 3600000, pollIntervalMs: 5000 });
-await mkdir('artifacts', { recursive: true });
-const output = await open('artifacts/dataset.ndjson', 'w');
+const output = await open('videos.ndjson', 'wx', 0o600);
 try {
-  for await (const row of client.bulk.rows(id)) await output.writeFile(JSON.stringify(row) + '\n');
+  const record = await open('videos.ndjson.job.json', 'wx', 0o600);
+  try {
+    const receipt = await client.bulk.create({
+      source: 'youtube_metadata',
+      options: { include_formats: false },
+    });
+    const bulkId = receipt.job.id;
+    console.log('Save this bulk ID:', bulkId);
+    await record.writeFile(JSON.stringify({ id: bulkId }) + '\n', 'utf8');
+    await record.sync();
+    await client.bulk.uploadFile(receipt, 'video-ids.txt');
+    await client.bulk.start(bulkId);
+    const completed = await client.bulk.wait(bulkId, {
+      timeoutMs: 3600000,
+      pollIntervalMs: 5000,
+    });
+
+    for await (const row of client.bulk.rows(bulkId)) {
+      await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
+    }
+    console.log('Saved videos.ndjson; counts:', completed.counts);
+    if (completed.counts.failed || completed.counts.invalid) {
+      throw new Error('Some items failed; inspect the saved rows before retrying');
+    }
+  } finally {
+    await record.close();
+  }
 } finally {
   await output.close();
 }
-console.log(completed.counts);
 ```
 
 Creation returns `{job, upload}`. Keep the whole receipt for `uploadFile`, which streams
@@ -48,28 +63,44 @@ Use the same lifecycle as data jobs. Here is the complete task (prepare `video-i
 and private destination JSON first; see [storage](storage.md)):
 
 ```javascript
-import { readFile } from 'node:fs/promises';
+import { readFile, open } from 'node:fs/promises';
 import { FlashData } from '@flashdata-dev/sdk';
 
 const storage = JSON.parse(await readFile('private-storage.json', 'utf8'));
 const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
-const receipt = await client.bulk.create({
-  source: 'youtube_download',
-  options: {
-    download_type: 'audio_video',
-    video_quality: '<=720',
-    output_format: 'mp4',
-    storage,
-  },
-});
-const bulkId = receipt.job.id;
-console.log('Save this bulk ID:', bulkId);
-await client.bulk.uploadFile(receipt, 'video-ids.txt');
-await client.bulk.start(bulkId);
-const completed = await client.bulk.wait(bulkId, { timeoutMs: 3600000, pollIntervalMs: 5000 });
-console.log('Counts:', completed.counts);
-for await (const row of client.bulk.rows(bulkId)) {
-  console.log(row.video_id, row.status);
+const output = await open('downloads.ndjson', 'wx', 0o600);
+try {
+  const record = await open('downloads.ndjson.job.json', 'wx', 0o600);
+  try {
+    const receipt = await client.bulk.create({
+      source: 'youtube_download',
+      options: {
+        download_type: 'audio_video',
+        video_quality: '<=720',
+        output_format: 'mp4',
+        storage,
+      },
+    });
+    const bulkId = receipt.job.id;
+    console.log('Save this bulk ID:', bulkId);
+    await record.writeFile(JSON.stringify({ id: bulkId }) + '\n', 'utf8');
+    await record.sync();
+    await client.bulk.uploadFile(receipt, 'video-ids.txt');
+    await client.bulk.start(bulkId);
+    const completed = await client.bulk.wait(bulkId, { timeoutMs: 3600000, pollIntervalMs: 5000 });
+    console.log('Counts:', completed.counts);
+    for await (const row of client.bulk.rows(bulkId)) {
+      await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
+      console.log(row.video_id, row.status);
+    }
+    if (completed.counts.failed || completed.counts.invalid) {
+      throw new Error('Some items failed; inspect downloads.ndjson before retrying');
+    }
+  } finally {
+    await record.close();
+  }
+} finally {
+  await output.close();
 }
 ```
 
@@ -111,3 +142,14 @@ bytes and rejects malformed gzip/UTF-8/JSON. Export within the 24-hour result wi
 `list({cursor, limit})` returns `data` and `pagination`. `iterJobs({maxPages, limit})` yields
 jobs from a bounded number of pages and rejects missing/repeated continuation cursors.
 All iterators support request options with `signal` and `timeoutMs`.
+
+## Safe local exports
+
+The bulk scripts reserve new output and `OUTPUT.job.json` files before any API call,
+refuse existing files, and sync accepted IDs before upload. Completion records are
+replaced atomically. A lost start response leaves its accepted ID available; recovery
+uses that ID and a fresh output path without another creation or upload. Empty reserved
+records after an uncertain create require account/server reconciliation.
+
+Use `bulk_download.mjs` with `--audio` for MP3; the default is MP4.
+Compare [all SDKs and the CLI](sdk-parity.md) for coverage and persistence differences.

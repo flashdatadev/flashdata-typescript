@@ -31,9 +31,10 @@ SDK 提供请求与响应类型、参数校验、结构化错误、限制页数�
 | 视频分析和内容目录补全             | [视频元数据](#获取视频元数据)                |
 | 为视频摘要、搜索或检索获取文本     | [已有字幕文本](#为-ai-工作流获取字幕文本)    |
 | 根据一组视频 ID 构建数据集         | [批量元数据导出](#构建-youtube-元数据数据集) |
-| 将 MP4 文件交付到自己的云存储桶    | [批量媒体下载](#批量下载-youtube-视频)       |
+| 将音频或视频交付到自己的云存储桶   | [批量媒体下载](#批量下载-youtube-视频)       |
+| 继续中断的批量任务                 | [恢复任务](#恢复已启动的批量任务)            |
 
-以下示例负责通过 API 获取数据；摘要生成、索引、定时调度和 AI 模型调用由你的应用实现。
+以下示例负责获取数据；摘要、检索索引、调度和 AI 模型调用由应用实现。
 
 ## 安装
 
@@ -233,34 +234,41 @@ import { open } from 'node:fs/promises';
 import { FlashData } from '@flashdata-dev/sdk';
 
 const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
-const receipt = await client.bulk.create({
-  source: 'youtube_metadata',
-  options: { include_formats: false },
-});
-const bulkId = receipt.job.id;
-console.log('Save this bulk ID:', bulkId);
-await client.bulk.uploadFile(receipt, 'video-ids.txt');
-await client.bulk.start(bulkId);
-const completed = await client.bulk.wait(bulkId, {
-  timeoutMs: 3600000,
-  pollIntervalMs: 5000,
-});
-
-const output = await open('videos.ndjson', 'wx');
+const output = await open('videos.ndjson', 'wx', 0o600);
 try {
-  for await (const row of client.bulk.rows(bulkId)) {
-    await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
+  const record = await open('videos.ndjson.job.json', 'wx', 0o600);
+  try {
+    const receipt = await client.bulk.create({
+      source: 'youtube_metadata',
+      options: { include_formats: false },
+    });
+    const bulkId = receipt.job.id;
+    console.log('Save this bulk ID:', bulkId);
+    await record.writeFile(JSON.stringify({ id: bulkId }) + '\n', 'utf8');
+    await record.sync();
+    await client.bulk.uploadFile(receipt, 'video-ids.txt');
+    await client.bulk.start(bulkId);
+    const completed = await client.bulk.wait(bulkId, {
+      timeoutMs: 3600000,
+      pollIntervalMs: 5000,
+    });
+
+    for await (const row of client.bulk.rows(bulkId)) {
+      await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
+    }
+    console.log('Saved videos.ndjson; counts:', completed.counts);
+    if (completed.counts.failed || completed.counts.invalid) {
+      throw new Error('Some items failed; inspect the saved rows before retrying');
+    }
+  } finally {
+    await record.close();
   }
 } finally {
   await output.close();
 }
-console.log('Saved videos.ndjson; counts:', completed.counts);
-if (completed.counts.failed || completed.counts.invalid) {
-  throw new Error('Some items failed; inspect the saved rows before retrying');
-}
 ```
 
-等待之前，请在应用中持久化打印出的任务 ID。进程重启或超时后，使用下方的
+内联程序会在上传前将已受理的任务 ID 保存到 `videos.ndjson.job.json`。进程重启或超时后，使用下方的
 [恢复流程](#恢复已启动的批量任务)，不要重新运行创建代码。示例导出使用独占创建模式，拒绝覆盖已有文件。
 
 如需开箱即用的脚本，在仓库根目录运行以下命令。它会在上传前自动将任务记录保存到
@@ -306,36 +314,44 @@ import { FlashData } from '@flashdata-dev/sdk';
 
 const storage = JSON.parse(await readFile('private-storage.json', 'utf8'));
 const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
-const receipt = await client.bulk.create({
-  source: 'youtube_download',
-  options: {
-    download_type: 'audio_video',
-    video_quality: '<=720',
-    output_format: 'mp4',
-    storage,
-  },
-});
-const bulkId = receipt.job.id;
-console.log('Save this bulk ID:', bulkId);
-await client.bulk.uploadFile(receipt, 'video-ids.txt');
-await client.bulk.start(bulkId);
-const completed = await client.bulk.wait(bulkId, { timeoutMs: 3600000, pollIntervalMs: 5000 });
-console.log('Counts:', completed.counts);
-const output = await open('downloads.ndjson', 'wx');
+const output = await open('downloads.ndjson', 'wx', 0o600);
 try {
-  for await (const row of client.bulk.rows(bulkId)) {
-    await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
-    console.log(row.video_id, row.status);
+  const record = await open('downloads.ndjson.job.json', 'wx', 0o600);
+  try {
+    const receipt = await client.bulk.create({
+      source: 'youtube_download',
+      options: {
+        download_type: 'audio_video',
+        video_quality: '<=720',
+        output_format: 'mp4',
+        storage,
+      },
+    });
+    const bulkId = receipt.job.id;
+    console.log('Save this bulk ID:', bulkId);
+    await record.writeFile(JSON.stringify({ id: bulkId }) + '\n', 'utf8');
+    await record.sync();
+    await client.bulk.uploadFile(receipt, 'video-ids.txt');
+    await client.bulk.start(bulkId);
+    const completed = await client.bulk.wait(bulkId, { timeoutMs: 3600000, pollIntervalMs: 5000 });
+    console.log('Counts:', completed.counts);
+    for await (const row of client.bulk.rows(bulkId)) {
+      await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
+      console.log(row.video_id, row.status);
+    }
+    if (completed.counts.failed || completed.counts.invalid) {
+      throw new Error('Some items failed; inspect downloads.ndjson before retrying');
+    }
+  } finally {
+    await record.close();
   }
 } finally {
   await output.close();
 }
-if (completed.counts.failed || completed.counts.invalid) {
-  throw new Error('Some items failed; inspect downloads.ndjson before retrying');
-}
 ```
 
-以上程序将交付回执保存到 `downloads.ndjson`，并拒绝覆盖已有文件。
+以上程序会在上传前将已受理的 ID 保存到 `downloads.ndjson.job.json`，
+将交付回执保存到 `downloads.ndjson`，并拒绝覆盖已有文件。
 逐项失败时会先保存回执，再报告错误。
 
 媒体交付到你配置的存储桶。`bulk.rows()` 读取包含视频状态和 `results` 数据源输出的 JSON 结果记录，
@@ -354,6 +370,15 @@ node examples/bulk_download.mjs --bulk-id bulk_YOUR_SAVED_ID --output artifacts/
 
 尚处于 `awaiting_upload` 的草稿仍需上传文件并调用 `start`；暂停的任务需解决暂停原因后调用 `resume`。
 详见[批量控制与恢复](docs/bulk.md)、[下载选项](docs/sources/youtube_download.md)和[支持的存储服务商](docs/storage.md)。
+
+### 改为交付 MP3 音频
+
+相同 ID 文件和存储配置也可用于音频任务。将上述内联请求的下载选项改为
+`download_type="audio"` 和 `output_format="mp3"`，并移除 `video_quality`；或者在仓库根目录运行：
+
+```sh
+node examples/bulk_download.mjs video-ids.txt --audio --storage-file private-storage.json --output artifacts/audio.ndjson
+```
 
 ## 恢复已启动的批量任务
 
@@ -448,7 +473,11 @@ npm run examples:typescript -- coffee
 
 真实 API 示例会消耗积分。`node examples/offline.mjs` 使用模拟请求，无需账户或网络。
 所有脚本支持 `--help`，导入模块时不会发起请求。
-[SDK 对照说明](docs/sdk-parity.md)列出了 Python 与 TypeScript 的 API 覆盖、语言差异、工作流行为和验证范围。
+[SDK 对照说明](docs/sdk-parity.md)列出了 Python、TypeScript/JavaScript、Go 和 CLI 的 API 覆盖、语言差异、工作流行为和验证范围。
+
+批量脚本会在任何 API 调用之前拒绝覆盖已有导出或 `OUTPUT.job.json` 记录。
+超时或中断后，请使用已保存的 ID 和新输出路径恢复；不要重新执行创建。
+保留的空记录表示需先核实提交结果，再决定是否创建新任务。
 
 ## 从源码安装
 

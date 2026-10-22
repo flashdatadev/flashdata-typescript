@@ -65,8 +65,8 @@ save the signed upload descriptor. Keep the printed ID if upload or polling fail
 
 ```sh
 node examples/async_query.mjs --job-id job_YOUR_SAVED_ID --output artifacts/job.json
-node examples/bulk.mjs --bulk-id bulk_YOUR_SAVED_ID --output artifacts/videos.ndjson
-node examples/bulk_download.mjs --bulk-id bulk_YOUR_SAVED_ID --output artifacts/downloads.ndjson
+node examples/bulk.mjs --bulk-id bulk_YOUR_SAVED_ID --output artifacts/videos-recovered.ndjson
+node examples/bulk_download.mjs --bulk-id bulk_YOUR_SAVED_ID --output artifacts/downloads-recovered.ndjson
 ```
 
 Resume commands read existing tasks without creating another submission. Bulk completion
@@ -75,3 +75,14 @@ before an item-failure exit status, preserving data for application recovery. ND
 records describe media delivery; the media itself is written to your configured bucket.
 Bulk resume assumes the task has already started. Drafts still require upload/start;
 paused tasks require resolving the pause and calling `bulk.resume()` before waiting.
+
+## Bulk export and recovery safety
+
+Bulk scripts reserve fresh export and `OUTPUT.job.json` paths before contacting the API.
+They refuse to overwrite either file, including an orphaned or empty recovery record.
+Accepted IDs are synced before upload, and completion checkpoints are replaced atomically.
+After interruption, use `--bulk-id` with a fresh `--output` filename; never rerun creation
+with an old output path. Empty records after uncertain creation need reconciliation.
+
+The media example defaults to MP4. Add `--audio` for MP3 using the same private storage
+configuration. See the [workflow comparison](../docs/sdk-parity.md).

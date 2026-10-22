@@ -24,5 +24,5 @@ ordinary response objects, background jobs, and bulk ID files. Start with
 The generated TypeDoc site includes these guides and the exported client, resource,
 request/response types, and exception reference. Build it with `npm run docs:build`.
 
-See the [Python and TypeScript comparison](sdk-parity.md) for shared API coverage,
+See the [SDK and CLI comparison](sdk-parity.md) for shared API coverage,
 bulk recovery guarantees and intentional language differences.

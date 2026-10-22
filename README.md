@@ -26,18 +26,19 @@ See the [API documentation](https://flashdata.dev/docs) and [pricing](https://fl
 
 ## Choose a workflow
 
-| What you want to build                           | Start here                                                      |
-| ------------------------------------------------ | --------------------------------------------------------------- |
-| Web context and source links for an AI assistant | [Google search](#search-google)                                 |
-| Industry research or news monitoring             | [News search](#follow-industry-news)                            |
-| Video discovery for a topic or learning resource | [YouTube search](#find-youtube-videos-about-a-topic)            |
-| Video analytics and catalog enrichment           | [Video metadata](#get-a-videos-metadata)                        |
-| Text for video summaries, search or retrieval    | [Existing transcripts](#get-transcript-text-for-an-ai-workflow) |
-| A dataset from a list of video IDs               | [Bulk metadata export](#build-a-youtube-metadata-dataset)       |
-| MP4 files delivered to your own cloud bucket     | [Bulk media download](#download-youtube-videos-in-bulk)         |
+| What you want to build                                  | Start here                                                      |
+| ------------------------------------------------------- | --------------------------------------------------------------- |
+| Web context and source links for an AI assistant        | [Google search](#search-google)                                 |
+| Industry research or news monitoring                    | [News search](#follow-industry-news)                            |
+| Video discovery for a topic or learning resource        | [YouTube search](#find-youtube-videos-about-a-topic)            |
+| Video analytics and catalog enrichment                  | [Video metadata](#get-a-videos-metadata)                        |
+| Text for video summaries, search or retrieval           | [Existing transcripts](#get-transcript-text-for-an-ai-workflow) |
+| A dataset from a list of video IDs                      | [Bulk metadata export](#build-a-youtube-metadata-dataset)       |
+| Audio or video files delivered to your own cloud bucket | [Bulk media download](#download-youtube-videos-in-bulk)         |
+| Continue an interrupted bulk job                        | [Recovery](#recover-an-already-started-bulk-job)                |
 
-The examples below show API data collection. Your application supplies any summarization,
-indexing, scheduling or AI model calls.
+The examples collect data; your application provides summarization, indexing, scheduling
+and AI model calls.
 
 ## Install
 
@@ -244,34 +245,41 @@ import { open } from 'node:fs/promises';
 import { FlashData } from '@flashdata-dev/sdk';
 
 const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
-const receipt = await client.bulk.create({
-  source: 'youtube_metadata',
-  options: { include_formats: false },
-});
-const bulkId = receipt.job.id;
-console.log('Save this bulk ID:', bulkId);
-await client.bulk.uploadFile(receipt, 'video-ids.txt');
-await client.bulk.start(bulkId);
-const completed = await client.bulk.wait(bulkId, {
-  timeoutMs: 3600000,
-  pollIntervalMs: 5000,
-});
-
-const output = await open('videos.ndjson', 'wx');
+const output = await open('videos.ndjson', 'wx', 0o600);
 try {
-  for await (const row of client.bulk.rows(bulkId)) {
-    await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
+  const record = await open('videos.ndjson.job.json', 'wx', 0o600);
+  try {
+    const receipt = await client.bulk.create({
+      source: 'youtube_metadata',
+      options: { include_formats: false },
+    });
+    const bulkId = receipt.job.id;
+    console.log('Save this bulk ID:', bulkId);
+    await record.writeFile(JSON.stringify({ id: bulkId }) + '\n', 'utf8');
+    await record.sync();
+    await client.bulk.uploadFile(receipt, 'video-ids.txt');
+    await client.bulk.start(bulkId);
+    const completed = await client.bulk.wait(bulkId, {
+      timeoutMs: 3600000,
+      pollIntervalMs: 5000,
+    });
+
+    for await (const row of client.bulk.rows(bulkId)) {
+      await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
+    }
+    console.log('Saved videos.ndjson; counts:', completed.counts);
+    if (completed.counts.failed || completed.counts.invalid) {
+      throw new Error('Some items failed; inspect the saved rows before retrying');
+    }
+  } finally {
+    await record.close();
   }
 } finally {
   await output.close();
 }
-console.log('Saved videos.ndjson; counts:', completed.counts);
-if (completed.counts.failed || completed.counts.invalid) {
-  throw new Error('Some items failed; inspect the saved rows before retrying');
-}
 ```
 
-Persist the printed job ID in your application before waiting. After a restart or timeout,
+The inline program saves the accepted ID to `videos.ndjson.job.json` before uploading. After a restart or timeout,
 use the [recovery flow](#recover-an-already-started-bulk-job) below instead of rerunning creation.
 The inline export uses exclusive creation and refuses to overwrite an existing file.
 
@@ -317,36 +325,44 @@ import { FlashData } from '@flashdata-dev/sdk';
 
 const storage = JSON.parse(await readFile('private-storage.json', 'utf8'));
 const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
-const receipt = await client.bulk.create({
-  source: 'youtube_download',
-  options: {
-    download_type: 'audio_video',
-    video_quality: '<=720',
-    output_format: 'mp4',
-    storage,
-  },
-});
-const bulkId = receipt.job.id;
-console.log('Save this bulk ID:', bulkId);
-await client.bulk.uploadFile(receipt, 'video-ids.txt');
-await client.bulk.start(bulkId);
-const completed = await client.bulk.wait(bulkId, { timeoutMs: 3600000, pollIntervalMs: 5000 });
-console.log('Counts:', completed.counts);
-const output = await open('downloads.ndjson', 'wx');
+const output = await open('downloads.ndjson', 'wx', 0o600);
 try {
-  for await (const row of client.bulk.rows(bulkId)) {
-    await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
-    console.log(row.video_id, row.status);
+  const record = await open('downloads.ndjson.job.json', 'wx', 0o600);
+  try {
+    const receipt = await client.bulk.create({
+      source: 'youtube_download',
+      options: {
+        download_type: 'audio_video',
+        video_quality: '<=720',
+        output_format: 'mp4',
+        storage,
+      },
+    });
+    const bulkId = receipt.job.id;
+    console.log('Save this bulk ID:', bulkId);
+    await record.writeFile(JSON.stringify({ id: bulkId }) + '\n', 'utf8');
+    await record.sync();
+    await client.bulk.uploadFile(receipt, 'video-ids.txt');
+    await client.bulk.start(bulkId);
+    const completed = await client.bulk.wait(bulkId, { timeoutMs: 3600000, pollIntervalMs: 5000 });
+    console.log('Counts:', completed.counts);
+    for await (const row of client.bulk.rows(bulkId)) {
+      await output.writeFile(JSON.stringify(row) + '\n', 'utf8');
+      console.log(row.video_id, row.status);
+    }
+    if (completed.counts.failed || completed.counts.invalid) {
+      throw new Error('Some items failed; inspect downloads.ndjson before retrying');
+    }
+  } finally {
+    await record.close();
   }
 } finally {
   await output.close();
 }
-if (completed.counts.failed || completed.counts.invalid) {
-  throw new Error('Some items failed; inspect downloads.ndjson before retrying');
-}
 ```
 
-The inline program saves delivery receipts to `downloads.ndjson` and refuses to overwrite
+The inline program saves its accepted ID to `downloads.ndjson.job.json` before uploading.
+It saves delivery receipts to `downloads.ndjson` and refuses to overwrite
 an existing file. Item failures are reported after receipts have been saved.
 
 Media is delivered into your configured bucket. `bulk.rows()` reads JSON result records
@@ -367,6 +383,16 @@ Use a fresh output path to retain any previous export.
 
 See [bulk controls and recovery](docs/bulk.md), [download options](docs/sources/youtube_download.md),
 and [supported storage providers](docs/storage.md).
+
+### Deliver MP3 audio instead
+
+Use the same ID file and private storage configuration. In the inline request, set
+`download_type` to `audio`, set `output_format` to `mp3`, and remove `video_quality`;
+or run the ready-to-use script from the repository root:
+
+```sh
+node examples/bulk_download.mjs video-ids.txt --audio --storage-file private-storage.json --output artifacts/audio.ndjson
+```
 
 ## Recover an already started bulk job
 
@@ -464,8 +490,12 @@ npm run examples:typescript -- coffee
 Live examples consume credits. `node examples/offline.mjs` demonstrates a mock query
 with no account or network. All scripts support `--help` and do no network work on import.
 
-The [SDK comparison](docs/sdk-parity.md) maps Python and TypeScript coverage, language
-differences, workflow guarantees, and verification limits side by side.
+The [SDK and CLI comparison](docs/sdk-parity.md) maps Python, TypeScript/JavaScript, Go
+and CLI coverage, examples, bulk recovery and intentional language differences side by side.
+
+Bulk scripts refuse existing exports or `OUTPUT.job.json` records before any API call.
+After a timeout or interruption, recover the saved ID into a fresh output path; do not
+rerun creation. An empty reserved record needs reconciliation before new work.
 
 ## Install from source
 
