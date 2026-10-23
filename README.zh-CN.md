@@ -98,6 +98,39 @@ for (const payload of response.results) {
 Google 网页搜索条目位于其中的 `organic` 列表中。
 本次请求消耗的积分（Credits）位于 `response.usage.credits`。其他数据源使用各自的字段路径。
 
+## 选择响应格式
+
+默认返回 JSON 对象。在第二个参数中设置 `accept: 'text/plain'` 返回字符串，
+或设置 `respondWith: 'markdown'` 选择 Markdown 内容。
+
+| `accept`                     | `respondWith` | 返回值                             |
+| ---------------------------- | ------------- | ---------------------------------- |
+| `'application/json'`（默认） | 省略          | 包含原始 `results` 的对象          |
+| `'text/plain'`               | 省略          | 原始字段的文本形式                 |
+| `'application/json'`（默认） | `'markdown'`  | Markdown 位于 `content` 字段的对象 |
+| `'text/plain'`               | `'markdown'`  | 元数据及 Markdown 内容             |
+
+```javascript
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const response = await client.google.search(
+  { query: 'vector databases' },
+  { respondWith: 'markdown' },
+);
+console.log(response.content);
+const text = await client.youtube.transcript(
+  { video_id: 'dQw4w9WgXcQ', language: 'en', auto: false },
+  { accept: 'text/plain', respondWith: 'markdown' },
+);
+console.log(text);
+```
+
+后台提交、批量提交及 `jobs.get()` 也支持 `accept`。
+后台任务的 Markdown 内容请通过 `jobs.result(id, { respondWith: 'markdown' })` 获取。
+更换已完成结果的格式不会重新查询或消耗查询积分。
+详见[响应格式指南](docs/response-formats.md)。
+
 ## 跟踪行业新闻
 
 收集行业新闻的标题、发布来源和文章链接，供研究工具或监控脚本使用。

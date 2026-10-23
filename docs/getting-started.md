@@ -72,3 +72,8 @@ argument to submit background work. Mixed batches create a job for each query; b
 apply one source and set of options to many video IDs. Save IDs before waiting and resume
 reads with those IDs if your process restarts. Each Google page is a separate paid query.
 Use [account discovery](account.md) to check pricing and plan limits before scaling.
+
+## Choose a response format
+
+JSON objects are the default. Use [plain text or Markdown](response-formats.md)
+when you want readable content, while keeping source links and response metadata.

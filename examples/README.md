@@ -86,3 +86,14 @@ with an old output path. Empty records after uncertain creation need reconciliat
 
 The media example defaults to MP4. Add `--audio` for MP3 using the same private storage
 configuration. See the [workflow comparison](../docs/sdk-parity.md).
+
+## Response formats
+
+```sh
+node examples/response_formats.mjs google_search "vector databases" --accept text/plain
+node examples/response_formats.mjs youtube_transcript dQw4w9WgXcQ --respond-with markdown --accept text/plain --output artifacts/transcript.md
+```
+
+Each command makes one query. Omit both format flags for JSON. The transcript example
+selects uploaded English captions; use `--auto` for automatic captions or `--language`
+for another available track. See [response formats](../docs/response-formats.md).

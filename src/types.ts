@@ -1530,6 +1530,33 @@ export interface BatchResponse {
   total_credits: number;
   usage: { credits: number };
 }
+/** HTTP success response types supported by the SDK. JSON is the default. */
+export type ResponseAccept = 'application/json' | 'text/plain';
+export type ContentRepresentation = 'markdown';
+/** Markdown replaces results; all other response metadata is preserved. */
+export interface MarkdownQueryResult {
+  source: string;
+  status: string;
+  content: string;
+  id?: string;
+  usage?: { credits?: number; [key: string]: unknown };
+  created_at?: string;
+  completed_at?: string;
+  expires_at?: string;
+  [key: string]: unknown;
+}
+export type ResponseResult<
+  JSON,
+  Accept extends ResponseAccept | undefined = undefined,
+> = Accept extends 'text/plain' ? string : JSON;
+export type ContentResult<
+  JSON,
+  Accept extends ResponseAccept | undefined = undefined,
+  Representation extends ContentRepresentation | undefined = undefined,
+> = Representation extends 'markdown'
+  ? ResponseResult<MarkdownQueryResult, Accept>
+  : ResponseResult<JSON, Accept>;
+
 export interface JobResult {
   id: string;
   source: Source;

@@ -25,6 +25,10 @@ Run `node examples/youtube_metadata.mjs dQw4w9WgXcQ --output artifacts/youtube_m
 
 `video_id` is required. Source options are properties on the first input object, or entries in `params` when using `queries`. Helpers default to realtime; pass `{mode: 'async'}` as the second argument for background work. Request options also accept `timeoutMs` and `signal`.
 
+JSON is the default. Pass `{ accept: 'text/plain' }` in the second argument for text.
+Realtime results also support `{ respondWith: 'markdown' }`. For background work,
+choose Markdown when reading the completed result. See [response formats](../response-formats.md).
+
 | Option             | Type / constraints | Default |
 | ------------------ | ------------------ | ------- |
 | `include_formats`  | boolean            | true    |

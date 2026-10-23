@@ -11,6 +11,7 @@ ordinary response objects, background jobs, and bulk ID files. Start with
 | [Getting started](getting-started.md)   | A working query with explicit API-key configuration     |
 | [Source guides](sources/index.md)       | Useful recipes for every Google and YouTube source      |
 | [Client configuration](client.md)       | Timeouts, cancellation, fetch injection and limits      |
+| [Response formats](response-formats.md) | JSON, plain text and Markdown                           |
 | [Jobs and batch](jobs.md)               | Persistent background work and mixed submissions        |
 | [Pagination](pagination.md)             | Bounded Google searches and CSV export                  |
 | [Bulk jobs](bulk.md)                    | Metadata datasets and cloud media downloads             |

@@ -4,6 +4,10 @@
 
 The generated TypeDoc site documents the exported `FlashData` client, resources, request
 options, wire types and errors. Use `npm run docs:build`, then open `docs/_build/index.html`.
+JSON is the default. Realtime queries and completed results accept `accept` and
+`respondWith` in their request options; receipts and status accept `accept`. Return
+types follow your format choice. See [response formats](response-formats.md).
+
 This page maps the public API surface to resource methods. JSON keys retain wire names;
 SDK methods and request configuration use camelCase.
 

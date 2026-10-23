@@ -1,6 +1,10 @@
 /** Preloaded into isolated example/doc processes. No external network is allowed. */
 import { readFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
+import { formatResponse } from './fixtures/response-formatting.cjs';
+const storedCases = JSON.parse(
+  await readFile(new URL('./fixtures/stored-result-formats.json', import.meta.url), 'utf8'),
+);
 const fixtures = JSON.parse(
   await readFile(new URL('./fixtures/source-examples.json', import.meta.url), 'utf8'),
 );
@@ -8,6 +12,19 @@ const jobs = new Map();
 const bulkId = 'bulk_example123';
 const origin = 'https://results.example';
 const json = (value, status = 200) => Response.json(value, { status });
+const stored = (id, source) => ({ ...structuredClone(storedCases[source][0].response), id });
+function formatted(value, init, content = false) {
+  const headers = new Headers(init.headers);
+  const accept = headers.get('accept') ?? 'application/json';
+  const body = formatResponse(value, {
+    accept,
+    content,
+    representation: content ? (headers.get('x-respond-with') ?? 'original') : 'original',
+  });
+  return typeof body === 'string'
+    ? new Response(body, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } })
+    : json(body);
+}
 globalThis.fetch = async (input, init = {}) => {
   if (process.env.FLASHDATA_TEST_NO_NETWORK === '1')
     throw new Error('Network work occurred during help/import.');
@@ -36,15 +53,7 @@ globalThis.fetch = async (input, init = {}) => {
     }
     const id = path.split('/').at(-1);
     const source = jobs.get(id) ?? 'google_search';
-    return json({
-      source,
-      results: fixtures[source].response.results ?? [],
-      ...(source === 'youtube_download' ? {} : { usage: fixtures[source].response.usage }),
-      id,
-      status: 'completed',
-      completed_at: '2026-10-20T00:00:00Z',
-      expires_at: '2026-10-21T00:00:00Z',
-    });
+    return json(stored(id, source));
   }
   if (!['https://api.flashdata.dev', 'https://data.flashdata.dev'].includes(url.origin))
     throw new Error('Unexpected external origin.');
@@ -52,20 +61,26 @@ globalThis.fetch = async (input, init = {}) => {
     const query = JSON.parse(init.body);
     if (query.query === 'flashdata_test_failure')
       return json({ message: 'Limited', code: 'limited', requestId: 'request-1' }, 429);
-    if (path.endsWith('/realtime')) return json(fixtures[query.source].response);
+    if (path.endsWith('/realtime')) return formatted(fixtures[query.source].response, init, true);
     if (path.endsWith('/batch'))
-      return json({
-        queries: query.queries.map((item, index) => {
-          const id = `job_example${index}`;
-          jobs.set(id, item.source);
-          return { id, source: item.source, status: 'pending', usage: { credits: 0.01 } };
-        }),
-        total_credits: 0.02,
-        usage: { credits: 0.02 },
-      });
+      return formatted(
+        {
+          queries: query.queries.map((item, index) => {
+            const id = `job_example${index}`;
+            jobs.set(id, item.source);
+            return { id, source: item.source, status: 'pending', usage: { credits: 0.01 } };
+          }),
+          total_credits: 0.02,
+          usage: { credits: 0.02 },
+        },
+        init,
+      );
     const id = 'job_example123';
     jobs.set(id, query.source);
-    return json({ id, source: query.source, status: 'pending', usage: { credits: 0.01 } });
+    return formatted(
+      { id, source: query.source, status: 'pending', usage: { credits: 0.01 } },
+      init,
+    );
   }
   if (path.endsWith('/api-access'))
     return json({ sources: Object.keys(fixtures), result_origin: origin });
@@ -79,9 +94,23 @@ globalThis.fetch = async (input, init = {}) => {
   if (path.endsWith('/plans')) return json({ currency: 'USD', data: [] });
   if (path.includes('/jobs/')) {
     const id = path.endsWith('/results') ? path.split('/').at(-2) : path.split('/').at(-1);
-    if (path.endsWith('/results'))
+    if (path.endsWith('/results')) {
+      const headers = new Headers(init.headers);
+      if (headers.get('accept') === 'text/plain' || headers.has('x-respond-with'))
+        return formatted(stored(id, jobs.get(id) ?? 'google_search'), init, true);
       return new Response(null, { status: 302, headers: { location: origin + '/job/' + id } });
-    return json({ job: { id, status: 'completed' } });
+    }
+    return formatted(
+      {
+        job: {
+          id,
+          source: jobs.get(id) ?? 'google_search',
+          status: 'completed',
+          completedAt: '2026-10-23T00:00:00Z',
+        },
+      },
+      init,
+    );
   }
   if (path.includes('/bulk-jobs')) {
     if (

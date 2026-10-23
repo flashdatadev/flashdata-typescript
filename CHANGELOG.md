@@ -12,6 +12,13 @@ failures, documented Python/TypeScript parity, and linked every guide to officia
 
 ## Unreleased
 
+- Add per-call `accept` and `respondWith` to realtime helpers and completed results;
+  JSON remains the default. Plain-text receipts, batches and status are also supported.
+- Preserve precise return types and reject incompatible mode, format and callback options.
+- Keep structured errors, cancellation, response limits and signed-storage credential separation.
+- Add format examples, English/Chinese README guidance, refreshed OpenAPI and
+  API-generated stored-result fixtures for all 15 sources.
+
 Align English/Chinese workflow navigation with all SDKs and the CLI. Bulk examples now reserve exports and recovery records before API calls, sync accepted IDs, preserve orphaned records, check every item status and recover without replay. Add an MP3 audio variant and update the side-by-side comparison.
 
 ## 1.0.0 — local release candidate

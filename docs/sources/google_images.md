@@ -23,6 +23,10 @@ Run `node examples/google_images.mjs coffee beans --output artifacts/google_imag
 
 `query` is required. Source options are properties on the first input object, or entries in `params` when using `queries`. Helpers default to realtime; pass `{mode: 'async'}` as the second argument for background work. Request options also accept `timeoutMs` and `signal`.
 
+JSON is the default. Pass `{ accept: 'text/plain' }` in the second argument for text.
+Realtime results also support `{ respondWith: 'markdown' }`. For background work,
+choose Markdown when reading the completed result. See [response formats](../response-formats.md).
+
 | Option        | Type / constraints                | Default                    |
 | ------------- | --------------------------------- | -------------------------- |
 | `gl`          | string; pattern `^[A-Za-z]{2}$`   | service default / optional |

@@ -2,6 +2,37 @@ import Ajv2020 from 'ajv/dist/2020.js';
 import { BlockList, isIP } from 'node:net';
 import schemas from './schemas.json';
 import { APIError, ProtocolError, ValidationError } from './errors.js';
+import type { ResponseAccept, ContentRepresentation } from './types.js';
+
+/** @internal */
+export class ResultRedirect {
+  constructor(readonly location: string) {}
+}
+
+/** @internal */
+export function responseFormat(
+  options: { accept?: unknown; respondWith?: unknown },
+  content = true,
+): { accept: ResponseAccept; respondWith?: ContentRepresentation } {
+  const accept = options.accept === undefined ? 'application/json' : options.accept;
+  if (accept !== 'application/json' && accept !== 'text/plain')
+    throw new ValidationError('accept must be application/json or text/plain.');
+  if (options.respondWith !== undefined && (!content || options.respondWith !== 'markdown'))
+    throw new ValidationError(
+      'respondWith supports markdown on realtime queries and completed results only.',
+    );
+  return { accept, respondWith: options.respondWith as ContentRepresentation | undefined };
+}
+
+/** @internal */
+export function decodeResponse(bytes: Uint8Array, accept: ResponseAccept): unknown {
+  if (accept !== 'text/plain') return decodeJSON(bytes);
+  try {
+    return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch {
+    throw new ProtocolError('The response was not valid UTF-8 text.');
+  }
+}
 
 export const sources = Object.freeze(Object.keys(schemas));
 export const bulkSources = [

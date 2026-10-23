@@ -31,6 +31,10 @@ Configure `private-storage.json` first; see [storage](../storage.md). Delivery r
 
 `video_id` is required. Source options are properties on the first input object, or entries in `params` when using `queries`. Downloads always run in the background; realtime download is unsupported.
 
+Pass `{ accept: 'text/plain' }` in the second argument for a text receipt. Choose
+Markdown for the completed manifest with `jobs.result(id, { respondWith: 'markdown' })`.
+Media files keep their original format. See [response formats](../response-formats.md).
+
 | Option            | Type / constraints                                                                                                                                                                                                                                  | Default                          |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
 | `download_type`   | `audio_video`, `video`, `audio`                                                                                                                                                                                                                     | "audio_video"                    |

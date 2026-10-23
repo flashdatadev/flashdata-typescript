@@ -115,6 +115,64 @@ function execute(name, args, directory, environment) {
     timeout: 15000,
   });
 }
+for (const source of ['google_search', 'youtube_transcript'])
+  for (const accept of ['application/json', 'text/plain'])
+    for (const markdown of [false, true])
+      test(`format CLI exports ${source} ${accept} markdown=${markdown}`, () =>
+        sandbox(async (directory, environment) => {
+          const output = join(directory, 'response.txt');
+          execute(
+            'response_formats.mjs',
+            [
+              source,
+              source === 'google_search' ? 'coffee' : 'dQw4w9WgXcQ',
+              '--accept',
+              accept,
+              ...(markdown ? ['--respond-with', 'markdown'] : []),
+              '--output',
+              output,
+            ],
+            directory,
+            environment,
+          );
+          const text = await readFile(output, 'utf8');
+          if (accept === 'application/json')
+            assert((markdown ? 'content' : 'results') in JSON.parse(text));
+          else assert(text.includes(markdown ? 'Markdown Content:' : 'Results:'));
+        }));
+
+test('documentation fixtures preserve job identity and metadata in all four formats', () =>
+  sandbox(async (directory, environment) => {
+    const stored = JSON.parse(
+      await readFile(join(root, 'tests/fixtures/stored-result-formats.json'), 'utf8'),
+    );
+    const code = `import assert from 'node:assert/strict';
+import {FlashData} from ${JSON.stringify(dist)};
+const client=new FlashData({apiKey:process.env.FLASHDATA_API_KEY});
+const fixtures=${JSON.stringify(fixtures)};const stored=${JSON.stringify(stored)};
+for(const [source,fixture] of Object.entries(fixtures)){
+const receipt=await client.queries.submit(fixture.request);const id=receipt.id;
+assert.equal((await client.jobs.wait(id)).source,source);
+const status=await client.jobs.get(id,{accept:'text/plain'});
+assert(status.includes('Id: "'+id+'"')&&status.includes('Status: "completed"'));
+for(const entry of stored[source]){
+const options={accept:entry.accept,...(entry.respondWith?{respondWith:entry.respondWith}:{})};
+const result=await client.jobs.result(id,options);
+const expected=typeof entry.response==='string'?entry.response.replaceAll('job_fixture0001',id):{...entry.response,id};
+assert.deepEqual(result,expected);
+}}
+console.log('All sources and stored formats preserve metadata.');`;
+    const file = join(directory, 'stored-formats.mjs');
+    await writeFile(file, code);
+    assert(
+      execFileSync(process.execPath, ['--import', mock, file], {
+        cwd: directory,
+        env: environment,
+        encoding: 'utf8',
+        timeout: 15000,
+      }).includes('preserve metadata'),
+    );
+  }));
 for (const source of Object.keys(fixtures))
   test(`${source} CLI exports a source-shaped response`, () =>
     sandbox(async (directory, environment) => {

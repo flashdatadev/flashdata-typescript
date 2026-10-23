@@ -74,3 +74,9 @@ your expected metadata/transcript size requires it; violations raise `ResponseTo
 Use bounded concurrency, as in `examples/concurrent_search.mjs`. Plan ceilings are shared
 across all account keys and do not describe currently free worker slots. Source defaults
 are applied by the service; omitted parameters are not silently filled by the SDK.
+
+## Response formats
+
+Pass `accept: 'text/plain'` in a query or job method's request options to receive a string.
+Realtime queries and completed results also accept `respondWith: 'markdown'`. JSON
+remains the default. See [response formats](response-formats.md) for examples and method scope.

@@ -123,3 +123,9 @@ These checks do not perform paid API queries or customer-cloud writes.
 | TypeScript / JavaScript | [README](https://github.com/flashdatadev/flashdata-typescript#readme) | [Examples](https://github.com/flashdatadev/flashdata-typescript/tree/main/examples) | [API](https://github.com/flashdatadev/flashdata-typescript/blob/main/docs/api-reference.md) | [Bulk](https://github.com/flashdatadev/flashdata-typescript/blob/main/docs/bulk.md) |
 | Go                      | [README](https://github.com/flashdatadev/flashdata-go#readme)         | [Examples](https://github.com/flashdatadev/flashdata-go/tree/main/examples)         | [API](https://github.com/flashdatadev/flashdata-go/blob/main/docs/api-reference.md)         | [Bulk](https://github.com/flashdatadev/flashdata-go/blob/main/docs/bulk.md)         |
 | CLI                     | [README](https://github.com/flashdatadev/flashdata-cli#readme)        | [Inputs](https://github.com/flashdatadev/flashdata-cli/tree/main/examples)          | [Commands](https://github.com/flashdatadev/flashdata-cli/blob/main/docs/commands.md)        | [Bulk](https://github.com/flashdatadev/flashdata-cli/blob/main/docs/bulk.md)        |
+
+## Response formats
+
+Python and TypeScript/JavaScript support per-call JSON, plain text and Markdown.
+Python uses `accept` and `respond_with`; TypeScript/JavaScript uses `accept` and
+`respondWith` in the second argument. See [response formats](response-formats.md).

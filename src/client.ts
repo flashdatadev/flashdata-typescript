@@ -5,12 +5,15 @@ import { Account, Bulk, Google, Jobs, Public, Queries, YouTube } from './resourc
 import {
   apiError,
   decodeJSON,
+  decodeResponse,
   encodeJSON,
   integer,
   origin,
   positive,
   secretValues,
   signedURL,
+  responseFormat,
+  ResultRedirect,
 } from './common.js';
 import {
   ConnectionError,
@@ -22,7 +25,7 @@ import {
   SubmissionUnknownError,
   ValidationError,
 } from './errors.js';
-import type { BulkJobCreated } from './types.js';
+import type { BulkJobCreated, ResponseAccept, ContentRepresentation } from './types.js';
 
 export interface FlashDataOptions {
   apiKey?: string;
@@ -42,12 +45,27 @@ export interface RequestOptions {
   signal?: AbortSignal;
   timeoutMs?: number;
 }
+/** Response envelope options for submissions, batches and job status. */
+export interface ResponseOptions extends RequestOptions {
+  accept?: ResponseAccept;
+  respondWith?: never;
+}
+/** Per-call response options for realtime queries and completed results. */
+export interface ContentOptions extends RequestOptions {
+  accept?: ResponseAccept;
+  respondWith?: ContentRepresentation;
+}
+/** Preserve literal option types while rejecting misspelled or unsupported option names. */
+export type RequestOptionsInput<Options, Allowed> = Options & {
+  [Key in Exclude<keyof Options, keyof Allowed>]: never;
+};
 export interface InternalRequest extends RequestOptions {
   body?: unknown;
   params?: Record<string, string | number | undefined>;
   data?: boolean;
   public?: boolean;
   redirect?: boolean;
+  responseFormat?: ContentOptions;
 }
 
 /** FlashData's server-side client. No requests are automatically retried. */
@@ -157,14 +175,16 @@ export class FlashData {
         'Pass apiKey or set FLASHDATA_API_KEY before calling an authenticated endpoint.',
       );
     const signal = this.#signal(options);
+    const format = responseFormat(options.responseFormat ?? {});
     const body = options.body === undefined ? undefined : encodeJSON(options.body);
     const url = new URL((options.data ? this.dataURL : this.managementURL + '/v2') + path);
     for (const [k, v] of Object.entries(options.params ?? {}))
       if (v !== undefined) url.searchParams.set(k, String(v));
     const headers: Record<string, string> = {
-      Accept: 'application/json',
+      Accept: format.accept,
       'User-Agent': 'flashdata-typescript/1.0.0',
     };
+    if (format.respondWith !== undefined) headers['X-Respond-With'] = format.respondWith;
     if (!options.public) headers['X-API-Key'] = this.#key;
     if (options.body !== undefined) headers['Content-Type'] = 'application/json';
     try {
@@ -180,11 +200,11 @@ export class FlashData {
         await response.body?.cancel();
         const location = response.headers.get('location');
         if (!location) throw new ProtocolError('Signed result redirect is missing its location.');
-        return location as T;
+        return new ResultRedirect(location) as T;
       }
       const bytes = await this.#read(response);
       if (!response.ok) throw apiError(response, bytes, [this.#key, ...secretValues(options.body)]);
-      return decodeJSON(bytes) as T;
+      return decodeResponse(bytes, format.accept) as T;
     } catch (error) {
       if (error instanceof FlashDataError) throw error;
       if (method !== 'GET')
@@ -197,15 +217,25 @@ export class FlashData {
     }
   }
   /** @internal */
-  async _result(path: string, binary: boolean, options: RequestOptions = {}): Promise<any> {
-    const location = await this._request<any>('GET', path, { ...options, redirect: true });
-    if (typeof location !== 'string') {
+  async _result(
+    path: string,
+    binary: boolean,
+    options: RequestOptions = {},
+    formatOptions: ContentOptions = {},
+  ): Promise<any> {
+    const format = responseFormat(formatOptions);
+    const location = await this._request<any>('GET', path, {
+      ...options,
+      redirect: format.accept === 'application/json' && format.respondWith === undefined,
+      responseFormat: format,
+    });
+    if (!(location instanceof ResultRedirect)) {
       if (binary) throw new ProtocolError('Expected a signed result redirect.');
       return location;
     }
     if (this.#resultOrigin === undefined)
       this.#resultOrigin = (await this.account.access(options)).result_origin;
-    const url = signedURL(location, this.#resultOrigin);
+    const url = signedURL(location.location, this.#resultOrigin);
     const signal = this.#signal(options);
     try {
       const response = await this.#storageFetch(url, {

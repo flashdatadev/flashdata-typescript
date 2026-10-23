@@ -2,7 +2,13 @@ import { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { performance } from 'node:perf_hooks';
-import type { FlashData, RequestOptions } from './client.js';
+import type {
+  FlashData,
+  RequestOptions,
+  ResponseOptions,
+  ContentOptions,
+  RequestOptionsInput,
+} from './client.js';
 import type * as T from './types.js';
 import {
   bulkInput,
@@ -13,6 +19,7 @@ import {
   validateQuery,
   jobRecord,
   record,
+  responseFormat,
 } from './common.js';
 import {
   JobFailedError,
@@ -29,10 +36,22 @@ export interface PollOptions extends RequestOptions {
   timeoutMs?: number;
   pollIntervalMs?: number;
 }
-export interface SourceRequestOptions extends RequestOptions {
-  mode?: 'realtime' | 'async';
+export type SourceRequestOptions =
+  | (ContentOptions & { mode?: 'realtime'; callback_url?: never })
+  | (ResponseOptions & { mode: 'async'; callback_url?: string | null });
+export type DownloadRequestOptions = ResponseOptions & {
+  mode?: 'async';
   callback_url?: string | null;
-}
+};
+export type SourceResult<
+  JSON,
+  Accept extends T.ResponseAccept | undefined,
+  Representation extends T.ContentRepresentation | undefined,
+  Mode extends 'realtime' | 'async' | undefined,
+> = Mode extends 'async'
+  ? T.ResponseResult<T.AsyncSubmission, Accept>
+  : T.ContentResult<JSON, Accept, Representation>;
+
 class Resource {
   constructor(protected readonly client: FlashData) {}
   protected async poll<T extends { status: string } & Record<string, unknown>>(
@@ -102,27 +121,45 @@ class Resource {
   }
 }
 export class Queries extends Resource {
-  realtime(query: T.RealtimeQuery, options: RequestOptions = {}): Promise<T.DataQueryResponse> {
+  realtime<const O extends ContentOptions = {}>(
+    query: T.RealtimeQuery,
+    options: RequestOptionsInput<O, ContentOptions> = {} as RequestOptionsInput<O, ContentOptions>,
+  ): Promise<T.ContentResult<T.DataQueryResponse, O['accept'], O['respondWith']>> {
     return this.client._request('POST', '/v1/queries/realtime', {
       ...options,
       data: true,
+      responseFormat: responseFormat(options),
       body: validateQuery(query),
     });
   }
-  submit(query: T.AsyncQuery, options: RequestOptions = {}): Promise<T.AsyncSubmission> {
+  submit<const O extends ResponseOptions = {}>(
+    query: T.AsyncQuery,
+    options: RequestOptionsInput<O, ResponseOptions> = {} as RequestOptionsInput<
+      O,
+      ResponseOptions
+    >,
+  ): Promise<T.ResponseResult<T.AsyncSubmission, O['accept']>> {
     return this.client._request('POST', '/v1/queries', {
       ...options,
       data: true,
+      responseFormat: responseFormat(options, false),
       body: validateQuery(query, true),
     });
   }
-  batch(queries: T.AsyncQuery[], options: RequestOptions = {}): Promise<T.BatchResponse> {
+  batch<const O extends ResponseOptions = {}>(
+    queries: T.AsyncQuery[],
+    options: RequestOptionsInput<O, ResponseOptions> = {} as RequestOptionsInput<
+      O,
+      ResponseOptions
+    >,
+  ): Promise<T.ResponseResult<T.BatchResponse, O['accept']>> {
     if (!Array.isArray(queries) || !queries.length)
       throw new ValidationError('Provide a non-empty query array; plan batch limits apply.');
     return this.client._request('POST', '/v1/queries/batch', {
       ...options,
       data: true,
       body: { queries: queries.map((q) => validateQuery(q, true)) },
+      responseFormat: responseFormat(options, false),
     });
   }
 }
@@ -169,13 +206,27 @@ export class Public extends Resource {
   }
 }
 export class Jobs extends Resource {
-  async get(id: string, options: RequestOptions = {}): Promise<T.ConsoleJob> {
-    return jobRecord<T.ConsoleJob>(
-      await this.client._request<{ job: T.ConsoleJob }>('GET', '/jobs/' + identifier(id), options),
-    );
+  async get<const O extends ResponseOptions = {}>(
+    id: string,
+    options: RequestOptionsInput<O, ResponseOptions> = {} as RequestOptionsInput<
+      O,
+      ResponseOptions
+    >,
+  ): Promise<T.ResponseResult<T.ConsoleJob, O['accept']>> {
+    const value = await this.client._request('GET', '/jobs/' + identifier(id), {
+      ...options,
+      responseFormat: responseFormat(options, false),
+    });
+    return (typeof value === 'string' ? value : jobRecord<T.ConsoleJob>(value)) as T.ResponseResult<
+      T.ConsoleJob,
+      O['accept']
+    >;
   }
-  result(id: string, options: RequestOptions = {}): Promise<T.JobResult> {
-    return this.client._result('/jobs/' + identifier(id) + '/results', false, options);
+  result<const O extends ContentOptions = {}>(
+    id: string,
+    options: RequestOptionsInput<O, ContentOptions> = {} as RequestOptionsInput<O, ContentOptions>,
+  ): Promise<T.ContentResult<T.JobResult, O['accept'], O['respondWith']>> {
+    return this.client._result('/jobs/' + identifier(id) + '/results', false, options, options);
   }
   wait(id: string, options: PollOptions = {}): Promise<T.ConsoleJob> {
     return this.poll<T.ConsoleJob>(id, false, options);
@@ -380,179 +431,250 @@ function parseRow(line: string): Record<string, unknown> {
 }
 
 export class Google extends Resource {
-  search(
-    input: { query: string } & T.GoogleSearchParams,
-    options?: SourceRequestOptions & { mode?: 'realtime' },
-  ): Promise<T.SourceQueryResponse<'google_search'>>;
-  search(
-    input: { query: string } & T.GoogleSearchParams,
-    options: SourceRequestOptions & { mode: 'async' },
-  ): Promise<T.AsyncSubmission>;
   /** https://flashdata.dev/docs/sources/google_search */
-  search(
+  search<const O extends SourceRequestOptions = {}>(
     input: { query: string } & T.GoogleSearchParams,
-    options: SourceRequestOptions = {},
-  ): Promise<T.DataQueryResponse | T.AsyncSubmission> {
+    options: RequestOptionsInput<O, SourceRequestOptions> = {} as RequestOptionsInput<
+      O,
+      SourceRequestOptions
+    >,
+  ): Promise<
+    SourceResult<T.SourceQueryResponse<'google_search'>, O['accept'], O['respondWith'], O['mode']>
+  > {
     const { query, ...params } = input;
     const mode = options.mode ?? 'realtime';
     if (!['realtime', 'async'].includes(mode))
       throw new ValidationError('mode must be realtime or async.');
     if (mode === 'realtime' && options.callback_url !== undefined)
       throw new ValidationError('Callbacks apply only to background queries.');
+    responseFormat(options, mode === 'realtime');
     const payload = {
       source: 'google_search',
       query,
       ...(Object.keys(params).length ? { params } : {}),
       ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
     };
-    return mode === 'async'
-      ? this.client.queries.submit(payload as T.AsyncQuery, options)
-      : this.client.queries.realtime(payload as T.RealtimeQuery, options);
+    return (
+      mode === 'async'
+        ? this.client.queries.submit(payload as T.AsyncQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+          })
+        : this.client.queries.realtime(payload as T.RealtimeQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+            respondWith: options.respondWith,
+          })
+    ) as Promise<
+      SourceResult<T.SourceQueryResponse<'google_search'>, O['accept'], O['respondWith'], O['mode']>
+    >;
   }
-  images(
-    input: { query: string } & T.GoogleImagesParams,
-    options?: SourceRequestOptions & { mode?: 'realtime' },
-  ): Promise<T.SourceQueryResponse<'google_images'>>;
-  images(
-    input: { query: string } & T.GoogleImagesParams,
-    options: SourceRequestOptions & { mode: 'async' },
-  ): Promise<T.AsyncSubmission>;
   /** https://flashdata.dev/docs/sources/google_images */
-  images(
+  images<const O extends SourceRequestOptions = {}>(
     input: { query: string } & T.GoogleImagesParams,
-    options: SourceRequestOptions = {},
-  ): Promise<T.DataQueryResponse | T.AsyncSubmission> {
+    options: RequestOptionsInput<O, SourceRequestOptions> = {} as RequestOptionsInput<
+      O,
+      SourceRequestOptions
+    >,
+  ): Promise<
+    SourceResult<T.SourceQueryResponse<'google_images'>, O['accept'], O['respondWith'], O['mode']>
+  > {
     const { query, ...params } = input;
     const mode = options.mode ?? 'realtime';
     if (!['realtime', 'async'].includes(mode))
       throw new ValidationError('mode must be realtime or async.');
     if (mode === 'realtime' && options.callback_url !== undefined)
       throw new ValidationError('Callbacks apply only to background queries.');
+    responseFormat(options, mode === 'realtime');
     const payload = {
       source: 'google_images',
       query,
       ...(Object.keys(params).length ? { params } : {}),
       ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
     };
-    return mode === 'async'
-      ? this.client.queries.submit(payload as T.AsyncQuery, options)
-      : this.client.queries.realtime(payload as T.RealtimeQuery, options);
+    return (
+      mode === 'async'
+        ? this.client.queries.submit(payload as T.AsyncQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+          })
+        : this.client.queries.realtime(payload as T.RealtimeQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+            respondWith: options.respondWith,
+          })
+    ) as Promise<
+      SourceResult<T.SourceQueryResponse<'google_images'>, O['accept'], O['respondWith'], O['mode']>
+    >;
   }
-  news(
-    input: { query: string } & T.GoogleNewsParams,
-    options?: SourceRequestOptions & { mode?: 'realtime' },
-  ): Promise<T.SourceQueryResponse<'google_news'>>;
-  news(
-    input: { query: string } & T.GoogleNewsParams,
-    options: SourceRequestOptions & { mode: 'async' },
-  ): Promise<T.AsyncSubmission>;
   /** https://flashdata.dev/docs/sources/google_news */
-  news(
+  news<const O extends SourceRequestOptions = {}>(
     input: { query: string } & T.GoogleNewsParams,
-    options: SourceRequestOptions = {},
-  ): Promise<T.DataQueryResponse | T.AsyncSubmission> {
+    options: RequestOptionsInput<O, SourceRequestOptions> = {} as RequestOptionsInput<
+      O,
+      SourceRequestOptions
+    >,
+  ): Promise<
+    SourceResult<T.SourceQueryResponse<'google_news'>, O['accept'], O['respondWith'], O['mode']>
+  > {
     const { query, ...params } = input;
     const mode = options.mode ?? 'realtime';
     if (!['realtime', 'async'].includes(mode))
       throw new ValidationError('mode must be realtime or async.');
     if (mode === 'realtime' && options.callback_url !== undefined)
       throw new ValidationError('Callbacks apply only to background queries.');
+    responseFormat(options, mode === 'realtime');
     const payload = {
       source: 'google_news',
       query,
       ...(Object.keys(params).length ? { params } : {}),
       ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
     };
-    return mode === 'async'
-      ? this.client.queries.submit(payload as T.AsyncQuery, options)
-      : this.client.queries.realtime(payload as T.RealtimeQuery, options);
+    return (
+      mode === 'async'
+        ? this.client.queries.submit(payload as T.AsyncQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+          })
+        : this.client.queries.realtime(payload as T.RealtimeQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+            respondWith: options.respondWith,
+          })
+    ) as Promise<
+      SourceResult<T.SourceQueryResponse<'google_news'>, O['accept'], O['respondWith'], O['mode']>
+    >;
   }
-  shopping(
-    input: { query: string } & T.GoogleShoppingParams,
-    options?: SourceRequestOptions & { mode?: 'realtime' },
-  ): Promise<T.SourceQueryResponse<'google_shopping'>>;
-  shopping(
-    input: { query: string } & T.GoogleShoppingParams,
-    options: SourceRequestOptions & { mode: 'async' },
-  ): Promise<T.AsyncSubmission>;
   /** https://flashdata.dev/docs/sources/google_shopping */
-  shopping(
+  shopping<const O extends SourceRequestOptions = {}>(
     input: { query: string } & T.GoogleShoppingParams,
-    options: SourceRequestOptions = {},
-  ): Promise<T.DataQueryResponse | T.AsyncSubmission> {
+    options: RequestOptionsInput<O, SourceRequestOptions> = {} as RequestOptionsInput<
+      O,
+      SourceRequestOptions
+    >,
+  ): Promise<
+    SourceResult<T.SourceQueryResponse<'google_shopping'>, O['accept'], O['respondWith'], O['mode']>
+  > {
     const { query, ...params } = input;
     const mode = options.mode ?? 'realtime';
     if (!['realtime', 'async'].includes(mode))
       throw new ValidationError('mode must be realtime or async.');
     if (mode === 'realtime' && options.callback_url !== undefined)
       throw new ValidationError('Callbacks apply only to background queries.');
+    responseFormat(options, mode === 'realtime');
     const payload = {
       source: 'google_shopping',
       query,
       ...(Object.keys(params).length ? { params } : {}),
       ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
     };
-    return mode === 'async'
-      ? this.client.queries.submit(payload as T.AsyncQuery, options)
-      : this.client.queries.realtime(payload as T.RealtimeQuery, options);
+    return (
+      mode === 'async'
+        ? this.client.queries.submit(payload as T.AsyncQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+          })
+        : this.client.queries.realtime(payload as T.RealtimeQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+            respondWith: options.respondWith,
+          })
+    ) as Promise<
+      SourceResult<
+        T.SourceQueryResponse<'google_shopping'>,
+        O['accept'],
+        O['respondWith'],
+        O['mode']
+      >
+    >;
   }
-  videos(
-    input: { query: string } & T.GoogleVideosParams,
-    options?: SourceRequestOptions & { mode?: 'realtime' },
-  ): Promise<T.SourceQueryResponse<'google_videos'>>;
-  videos(
-    input: { query: string } & T.GoogleVideosParams,
-    options: SourceRequestOptions & { mode: 'async' },
-  ): Promise<T.AsyncSubmission>;
   /** https://flashdata.dev/docs/sources/google_videos */
-  videos(
+  videos<const O extends SourceRequestOptions = {}>(
     input: { query: string } & T.GoogleVideosParams,
-    options: SourceRequestOptions = {},
-  ): Promise<T.DataQueryResponse | T.AsyncSubmission> {
+    options: RequestOptionsInput<O, SourceRequestOptions> = {} as RequestOptionsInput<
+      O,
+      SourceRequestOptions
+    >,
+  ): Promise<
+    SourceResult<T.SourceQueryResponse<'google_videos'>, O['accept'], O['respondWith'], O['mode']>
+  > {
     const { query, ...params } = input;
     const mode = options.mode ?? 'realtime';
     if (!['realtime', 'async'].includes(mode))
       throw new ValidationError('mode must be realtime or async.');
     if (mode === 'realtime' && options.callback_url !== undefined)
       throw new ValidationError('Callbacks apply only to background queries.');
+    responseFormat(options, mode === 'realtime');
     const payload = {
       source: 'google_videos',
       query,
       ...(Object.keys(params).length ? { params } : {}),
       ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
     };
-    return mode === 'async'
-      ? this.client.queries.submit(payload as T.AsyncQuery, options)
-      : this.client.queries.realtime(payload as T.RealtimeQuery, options);
+    return (
+      mode === 'async'
+        ? this.client.queries.submit(payload as T.AsyncQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+          })
+        : this.client.queries.realtime(payload as T.RealtimeQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+            respondWith: options.respondWith,
+          })
+    ) as Promise<
+      SourceResult<T.SourceQueryResponse<'google_videos'>, O['accept'], O['respondWith'], O['mode']>
+    >;
   }
-  places(
-    input: { query: string } & T.GooglePlacesParams,
-    options?: SourceRequestOptions & { mode?: 'realtime' },
-  ): Promise<T.SourceQueryResponse<'google_places'>>;
-  places(
-    input: { query: string } & T.GooglePlacesParams,
-    options: SourceRequestOptions & { mode: 'async' },
-  ): Promise<T.AsyncSubmission>;
   /** https://flashdata.dev/docs/sources/google_places */
-  places(
+  places<const O extends SourceRequestOptions = {}>(
     input: { query: string } & T.GooglePlacesParams,
-    options: SourceRequestOptions = {},
-  ): Promise<T.DataQueryResponse | T.AsyncSubmission> {
+    options: RequestOptionsInput<O, SourceRequestOptions> = {} as RequestOptionsInput<
+      O,
+      SourceRequestOptions
+    >,
+  ): Promise<
+    SourceResult<T.SourceQueryResponse<'google_places'>, O['accept'], O['respondWith'], O['mode']>
+  > {
     const { query, ...params } = input;
     const mode = options.mode ?? 'realtime';
     if (!['realtime', 'async'].includes(mode))
       throw new ValidationError('mode must be realtime or async.');
     if (mode === 'realtime' && options.callback_url !== undefined)
       throw new ValidationError('Callbacks apply only to background queries.');
+    responseFormat(options, mode === 'realtime');
     const payload = {
       source: 'google_places',
       query,
       ...(Object.keys(params).length ? { params } : {}),
       ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
     };
-    return mode === 'async'
-      ? this.client.queries.submit(payload as T.AsyncQuery, options)
-      : this.client.queries.realtime(payload as T.RealtimeQuery, options);
+    return (
+      mode === 'async'
+        ? this.client.queries.submit(payload as T.AsyncQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+          })
+        : this.client.queries.realtime(payload as T.RealtimeQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+            respondWith: options.respondWith,
+          })
+    ) as Promise<
+      SourceResult<T.SourceQueryResponse<'google_places'>, O['accept'], O['respondWith'], O['mode']>
+    >;
   }
   async *pages(
     source: Extract<T.Source, `google_${string}`>,
@@ -580,7 +702,7 @@ export class Google extends Resource {
     for (let page = start; page < start + options.maxPages; page++) {
       const response = await this.client.queries.realtime(
         { source, query, params: { ...options.params, page } } as T.RealtimeQuery,
-        options,
+        { signal: options.signal, timeoutMs: options.timeoutMs },
       );
       yield response;
       if (
@@ -599,243 +721,404 @@ export class Google extends Resource {
 }
 
 export class YouTube extends Resource {
-  search(
-    input: { query: string } & T.YoutubeSearchParams,
-    options?: SourceRequestOptions & { mode?: 'realtime' },
-  ): Promise<T.SourceQueryResponse<'youtube_search'>>;
-  search(
-    input: { query: string } & T.YoutubeSearchParams,
-    options: SourceRequestOptions & { mode: 'async' },
-  ): Promise<T.AsyncSubmission>;
   /** https://flashdata.dev/docs/sources/youtube_search */
-  search(
+  search<const O extends SourceRequestOptions = {}>(
     input: { query: string } & T.YoutubeSearchParams,
-    options: SourceRequestOptions = {},
-  ): Promise<T.DataQueryResponse | T.AsyncSubmission> {
+    options: RequestOptionsInput<O, SourceRequestOptions> = {} as RequestOptionsInput<
+      O,
+      SourceRequestOptions
+    >,
+  ): Promise<
+    SourceResult<T.SourceQueryResponse<'youtube_search'>, O['accept'], O['respondWith'], O['mode']>
+  > {
     const { query, ...params } = input;
     const mode = options.mode ?? 'realtime';
     if (!['realtime', 'async'].includes(mode))
       throw new ValidationError('mode must be realtime or async.');
     if (mode === 'realtime' && options.callback_url !== undefined)
       throw new ValidationError('Callbacks apply only to background queries.');
+    responseFormat(options, mode === 'realtime');
     const payload = {
       source: 'youtube_search',
       query,
       ...(Object.keys(params).length ? { params } : {}),
       ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
     };
-    return mode === 'async'
-      ? this.client.queries.submit(payload as T.AsyncQuery, options)
-      : this.client.queries.realtime(payload as T.RealtimeQuery, options);
+    return (
+      mode === 'async'
+        ? this.client.queries.submit(payload as T.AsyncQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+          })
+        : this.client.queries.realtime(payload as T.RealtimeQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+            respondWith: options.respondWith,
+          })
+    ) as Promise<
+      SourceResult<
+        T.SourceQueryResponse<'youtube_search'>,
+        O['accept'],
+        O['respondWith'],
+        O['mode']
+      >
+    >;
   }
-  searchExtended(
-    input: { query: string } & T.YoutubeSearchExtendedParams,
-    options?: SourceRequestOptions & { mode?: 'realtime' },
-  ): Promise<T.SourceQueryResponse<'youtube_search_extended'>>;
-  searchExtended(
-    input: { query: string } & T.YoutubeSearchExtendedParams,
-    options: SourceRequestOptions & { mode: 'async' },
-  ): Promise<T.AsyncSubmission>;
   /** https://flashdata.dev/docs/sources/youtube_search_extended */
-  searchExtended(
+  searchExtended<const O extends SourceRequestOptions = {}>(
     input: { query: string } & T.YoutubeSearchExtendedParams,
-    options: SourceRequestOptions = {},
-  ): Promise<T.DataQueryResponse | T.AsyncSubmission> {
+    options: RequestOptionsInput<O, SourceRequestOptions> = {} as RequestOptionsInput<
+      O,
+      SourceRequestOptions
+    >,
+  ): Promise<
+    SourceResult<
+      T.SourceQueryResponse<'youtube_search_extended'>,
+      O['accept'],
+      O['respondWith'],
+      O['mode']
+    >
+  > {
     const { query, ...params } = input;
     const mode = options.mode ?? 'realtime';
     if (!['realtime', 'async'].includes(mode))
       throw new ValidationError('mode must be realtime or async.');
     if (mode === 'realtime' && options.callback_url !== undefined)
       throw new ValidationError('Callbacks apply only to background queries.');
+    responseFormat(options, mode === 'realtime');
     const payload = {
       source: 'youtube_search_extended',
       query,
       ...(Object.keys(params).length ? { params } : {}),
       ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
     };
-    return mode === 'async'
-      ? this.client.queries.submit(payload as T.AsyncQuery, options)
-      : this.client.queries.realtime(payload as T.RealtimeQuery, options);
+    return (
+      mode === 'async'
+        ? this.client.queries.submit(payload as T.AsyncQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+          })
+        : this.client.queries.realtime(payload as T.RealtimeQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+            respondWith: options.respondWith,
+          })
+    ) as Promise<
+      SourceResult<
+        T.SourceQueryResponse<'youtube_search_extended'>,
+        O['accept'],
+        O['respondWith'],
+        O['mode']
+      >
+    >;
   }
-  metadata(
-    input: { video_id: string } & T.YoutubeMetadataParams,
-    options?: SourceRequestOptions & { mode?: 'realtime' },
-  ): Promise<T.SourceQueryResponse<'youtube_metadata'>>;
-  metadata(
-    input: { video_id: string } & T.YoutubeMetadataParams,
-    options: SourceRequestOptions & { mode: 'async' },
-  ): Promise<T.AsyncSubmission>;
   /** https://flashdata.dev/docs/sources/youtube_metadata */
-  metadata(
+  metadata<const O extends SourceRequestOptions = {}>(
     input: { video_id: string } & T.YoutubeMetadataParams,
-    options: SourceRequestOptions = {},
-  ): Promise<T.DataQueryResponse | T.AsyncSubmission> {
+    options: RequestOptionsInput<O, SourceRequestOptions> = {} as RequestOptionsInput<
+      O,
+      SourceRequestOptions
+    >,
+  ): Promise<
+    SourceResult<
+      T.SourceQueryResponse<'youtube_metadata'>,
+      O['accept'],
+      O['respondWith'],
+      O['mode']
+    >
+  > {
     const { video_id, ...params } = input;
     const mode = options.mode ?? 'realtime';
     if (!['realtime', 'async'].includes(mode))
       throw new ValidationError('mode must be realtime or async.');
     if (mode === 'realtime' && options.callback_url !== undefined)
       throw new ValidationError('Callbacks apply only to background queries.');
+    responseFormat(options, mode === 'realtime');
     const payload = {
       source: 'youtube_metadata',
       video_id,
       ...(Object.keys(params).length ? { params } : {}),
       ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
     };
-    return mode === 'async'
-      ? this.client.queries.submit(payload as T.AsyncQuery, options)
-      : this.client.queries.realtime(payload as T.RealtimeQuery, options);
+    return (
+      mode === 'async'
+        ? this.client.queries.submit(payload as T.AsyncQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+          })
+        : this.client.queries.realtime(payload as T.RealtimeQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+            respondWith: options.respondWith,
+          })
+    ) as Promise<
+      SourceResult<
+        T.SourceQueryResponse<'youtube_metadata'>,
+        O['accept'],
+        O['respondWith'],
+        O['mode']
+      >
+    >;
   }
-  transcript(
-    input: { video_id: string } & T.YoutubeTranscriptParams,
-    options?: SourceRequestOptions & { mode?: 'realtime' },
-  ): Promise<T.SourceQueryResponse<'youtube_transcript'>>;
-  transcript(
-    input: { video_id: string } & T.YoutubeTranscriptParams,
-    options: SourceRequestOptions & { mode: 'async' },
-  ): Promise<T.AsyncSubmission>;
   /** https://flashdata.dev/docs/sources/youtube_transcript */
-  transcript(
+  transcript<const O extends SourceRequestOptions = {}>(
     input: { video_id: string } & T.YoutubeTranscriptParams,
-    options: SourceRequestOptions = {},
-  ): Promise<T.DataQueryResponse | T.AsyncSubmission> {
+    options: RequestOptionsInput<O, SourceRequestOptions> = {} as RequestOptionsInput<
+      O,
+      SourceRequestOptions
+    >,
+  ): Promise<
+    SourceResult<
+      T.SourceQueryResponse<'youtube_transcript'>,
+      O['accept'],
+      O['respondWith'],
+      O['mode']
+    >
+  > {
     const { video_id, ...params } = input;
     const mode = options.mode ?? 'realtime';
     if (!['realtime', 'async'].includes(mode))
       throw new ValidationError('mode must be realtime or async.');
     if (mode === 'realtime' && options.callback_url !== undefined)
       throw new ValidationError('Callbacks apply only to background queries.');
+    responseFormat(options, mode === 'realtime');
     const payload = {
       source: 'youtube_transcript',
       video_id,
       ...(Object.keys(params).length ? { params } : {}),
       ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
     };
-    return mode === 'async'
-      ? this.client.queries.submit(payload as T.AsyncQuery, options)
-      : this.client.queries.realtime(payload as T.RealtimeQuery, options);
+    return (
+      mode === 'async'
+        ? this.client.queries.submit(payload as T.AsyncQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+          })
+        : this.client.queries.realtime(payload as T.RealtimeQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+            respondWith: options.respondWith,
+          })
+    ) as Promise<
+      SourceResult<
+        T.SourceQueryResponse<'youtube_transcript'>,
+        O['accept'],
+        O['respondWith'],
+        O['mode']
+      >
+    >;
   }
-  captions(
-    input: { video_id: string } & T.YoutubeCaptionsParams,
-    options?: SourceRequestOptions & { mode?: 'realtime' },
-  ): Promise<T.SourceQueryResponse<'youtube_captions'>>;
-  captions(
-    input: { video_id: string } & T.YoutubeCaptionsParams,
-    options: SourceRequestOptions & { mode: 'async' },
-  ): Promise<T.AsyncSubmission>;
   /** https://flashdata.dev/docs/sources/youtube_captions */
-  captions(
+  captions<const O extends SourceRequestOptions = {}>(
     input: { video_id: string } & T.YoutubeCaptionsParams,
-    options: SourceRequestOptions = {},
-  ): Promise<T.DataQueryResponse | T.AsyncSubmission> {
+    options: RequestOptionsInput<O, SourceRequestOptions> = {} as RequestOptionsInput<
+      O,
+      SourceRequestOptions
+    >,
+  ): Promise<
+    SourceResult<
+      T.SourceQueryResponse<'youtube_captions'>,
+      O['accept'],
+      O['respondWith'],
+      O['mode']
+    >
+  > {
     const { video_id, ...params } = input;
     const mode = options.mode ?? 'realtime';
     if (!['realtime', 'async'].includes(mode))
       throw new ValidationError('mode must be realtime or async.');
     if (mode === 'realtime' && options.callback_url !== undefined)
       throw new ValidationError('Callbacks apply only to background queries.');
+    responseFormat(options, mode === 'realtime');
     const payload = {
       source: 'youtube_captions',
       video_id,
       ...(Object.keys(params).length ? { params } : {}),
       ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
     };
-    return mode === 'async'
-      ? this.client.queries.submit(payload as T.AsyncQuery, options)
-      : this.client.queries.realtime(payload as T.RealtimeQuery, options);
+    return (
+      mode === 'async'
+        ? this.client.queries.submit(payload as T.AsyncQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+          })
+        : this.client.queries.realtime(payload as T.RealtimeQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+            respondWith: options.respondWith,
+          })
+    ) as Promise<
+      SourceResult<
+        T.SourceQueryResponse<'youtube_captions'>,
+        O['accept'],
+        O['respondWith'],
+        O['mode']
+      >
+    >;
   }
-  licenseCheck(
-    input: { video_id: string } & T.YoutubeTrainabilityParams,
-    options?: SourceRequestOptions & { mode?: 'realtime' },
-  ): Promise<T.SourceQueryResponse<'youtube_trainability'>>;
-  licenseCheck(
-    input: { video_id: string } & T.YoutubeTrainabilityParams,
-    options: SourceRequestOptions & { mode: 'async' },
-  ): Promise<T.AsyncSubmission>;
   /** https://flashdata.dev/docs/sources/youtube_trainability */
-  licenseCheck(
+  licenseCheck<const O extends SourceRequestOptions = {}>(
     input: { video_id: string } & T.YoutubeTrainabilityParams,
-    options: SourceRequestOptions = {},
-  ): Promise<T.DataQueryResponse | T.AsyncSubmission> {
+    options: RequestOptionsInput<O, SourceRequestOptions> = {} as RequestOptionsInput<
+      O,
+      SourceRequestOptions
+    >,
+  ): Promise<
+    SourceResult<
+      T.SourceQueryResponse<'youtube_trainability'>,
+      O['accept'],
+      O['respondWith'],
+      O['mode']
+    >
+  > {
     const { video_id, ...params } = input;
     const mode = options.mode ?? 'realtime';
     if (!['realtime', 'async'].includes(mode))
       throw new ValidationError('mode must be realtime or async.');
     if (mode === 'realtime' && options.callback_url !== undefined)
       throw new ValidationError('Callbacks apply only to background queries.');
+    responseFormat(options, mode === 'realtime');
     const payload = {
       source: 'youtube_trainability',
       video_id,
       ...(Object.keys(params).length ? { params } : {}),
       ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
     };
-    return mode === 'async'
-      ? this.client.queries.submit(payload as T.AsyncQuery, options)
-      : this.client.queries.realtime(payload as T.RealtimeQuery, options);
+    return (
+      mode === 'async'
+        ? this.client.queries.submit(payload as T.AsyncQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+          })
+        : this.client.queries.realtime(payload as T.RealtimeQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+            respondWith: options.respondWith,
+          })
+    ) as Promise<
+      SourceResult<
+        T.SourceQueryResponse<'youtube_trainability'>,
+        O['accept'],
+        O['respondWith'],
+        O['mode']
+      >
+    >;
   }
-  channel(
-    input: { handle: string } & T.YoutubeChannelParams,
-    options?: SourceRequestOptions & { mode?: 'realtime' },
-  ): Promise<T.SourceQueryResponse<'youtube_channel'>>;
-  channel(
-    input: { handle: string } & T.YoutubeChannelParams,
-    options: SourceRequestOptions & { mode: 'async' },
-  ): Promise<T.AsyncSubmission>;
   /** https://flashdata.dev/docs/sources/youtube_channel */
-  channel(
+  channel<const O extends SourceRequestOptions = {}>(
     input: { handle: string } & T.YoutubeChannelParams,
-    options: SourceRequestOptions = {},
-  ): Promise<T.DataQueryResponse | T.AsyncSubmission> {
+    options: RequestOptionsInput<O, SourceRequestOptions> = {} as RequestOptionsInput<
+      O,
+      SourceRequestOptions
+    >,
+  ): Promise<
+    SourceResult<T.SourceQueryResponse<'youtube_channel'>, O['accept'], O['respondWith'], O['mode']>
+  > {
     const { handle, ...params } = input;
     const mode = options.mode ?? 'realtime';
     if (!['realtime', 'async'].includes(mode))
       throw new ValidationError('mode must be realtime or async.');
     if (mode === 'realtime' && options.callback_url !== undefined)
       throw new ValidationError('Callbacks apply only to background queries.');
+    responseFormat(options, mode === 'realtime');
     const payload = {
       source: 'youtube_channel',
       handle,
       ...(Object.keys(params).length ? { params } : {}),
       ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
     };
-    return mode === 'async'
-      ? this.client.queries.submit(payload as T.AsyncQuery, options)
-      : this.client.queries.realtime(payload as T.RealtimeQuery, options);
+    return (
+      mode === 'async'
+        ? this.client.queries.submit(payload as T.AsyncQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+          })
+        : this.client.queries.realtime(payload as T.RealtimeQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+            respondWith: options.respondWith,
+          })
+    ) as Promise<
+      SourceResult<
+        T.SourceQueryResponse<'youtube_channel'>,
+        O['accept'],
+        O['respondWith'],
+        O['mode']
+      >
+    >;
   }
-  suggestions(
-    input: { query: string } & T.YoutubeSuggestionsParams,
-    options?: SourceRequestOptions & { mode?: 'realtime' },
-  ): Promise<T.SourceQueryResponse<'youtube_suggestions'>>;
-  suggestions(
-    input: { query: string } & T.YoutubeSuggestionsParams,
-    options: SourceRequestOptions & { mode: 'async' },
-  ): Promise<T.AsyncSubmission>;
   /** https://flashdata.dev/docs/sources/youtube_suggestions */
-  suggestions(
+  suggestions<const O extends SourceRequestOptions = {}>(
     input: { query: string } & T.YoutubeSuggestionsParams,
-    options: SourceRequestOptions = {},
-  ): Promise<T.DataQueryResponse | T.AsyncSubmission> {
+    options: RequestOptionsInput<O, SourceRequestOptions> = {} as RequestOptionsInput<
+      O,
+      SourceRequestOptions
+    >,
+  ): Promise<
+    SourceResult<
+      T.SourceQueryResponse<'youtube_suggestions'>,
+      O['accept'],
+      O['respondWith'],
+      O['mode']
+    >
+  > {
     const { query, ...params } = input;
     const mode = options.mode ?? 'realtime';
     if (!['realtime', 'async'].includes(mode))
       throw new ValidationError('mode must be realtime or async.');
     if (mode === 'realtime' && options.callback_url !== undefined)
       throw new ValidationError('Callbacks apply only to background queries.');
+    responseFormat(options, mode === 'realtime');
     const payload = {
       source: 'youtube_suggestions',
       query,
       ...(Object.keys(params).length ? { params } : {}),
       ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
     };
-    return mode === 'async'
-      ? this.client.queries.submit(payload as T.AsyncQuery, options)
-      : this.client.queries.realtime(payload as T.RealtimeQuery, options);
+    return (
+      mode === 'async'
+        ? this.client.queries.submit(payload as T.AsyncQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+          })
+        : this.client.queries.realtime(payload as T.RealtimeQuery, {
+            signal: options.signal,
+            timeoutMs: options.timeoutMs,
+            accept: options.accept,
+            respondWith: options.respondWith,
+          })
+    ) as Promise<
+      SourceResult<
+        T.SourceQueryResponse<'youtube_suggestions'>,
+        O['accept'],
+        O['respondWith'],
+        O['mode']
+      >
+    >;
   }
   /** Submit media delivery to customer cloud storage. Downloads always run in the background. */
-  download(
+  download<const O extends DownloadRequestOptions = {}>(
     input: { video_id: string } & T.YoutubeDownloadParams,
-    options: Omit<SourceRequestOptions, 'mode'> & { mode?: 'async' } = {},
-  ): Promise<T.AsyncSubmission> {
+    options: RequestOptionsInput<O, DownloadRequestOptions> = {} as RequestOptionsInput<
+      O,
+      DownloadRequestOptions
+    >,
+  ): Promise<T.ResponseResult<T.AsyncSubmission, O['accept']>> {
     const { video_id, ...params } = input;
     if (options.mode !== undefined && options.mode !== 'async')
       throw new ValidationError('Downloads support mode=async only.');
@@ -846,7 +1129,7 @@ export class YouTube extends Resource {
         params,
         ...(options.callback_url !== undefined ? { callback_url: options.callback_url } : {}),
       },
-      options,
-    );
+      { signal: options.signal, timeoutMs: options.timeoutMs, accept: options.accept },
+    ) as Promise<T.ResponseResult<T.AsyncSubmission, O['accept']>>;
   }
 }

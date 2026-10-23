@@ -24,6 +24,10 @@ Run `node examples/youtube_suggestions.mjs python --output artifacts/youtube_sug
 
 `query` is required. Source options are properties on the first input object, or entries in `params` when using `queries`. Helpers default to realtime; pass `{mode: 'async'}` as the second argument for background work. Request options also accept `timeoutMs` and `signal`.
 
+JSON is the default. Pass `{ accept: 'text/plain' }` in the second argument for text.
+Realtime results also support `{ respondWith: 'markdown' }`. For background work,
+choose Markdown when reading the completed result. See [response formats](../response-formats.md).
+
 | Option     | Type / constraints                | Default |
 | ---------- | --------------------------------- | ------- |
 | `language` | string; pattern `^[A-Za-z0-9-]+$` | "en"    |

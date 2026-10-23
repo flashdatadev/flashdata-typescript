@@ -76,11 +76,25 @@ try {
     ],
     consumer,
   );
-  const types = `import {FlashData,type CreateBulkJobRequest} from '@flashdata-dev/sdk';
+  const types = `import {FlashData,type CreateBulkJobRequest,type MarkdownQueryResult,type ResponseAccept} from '@flashdata-dev/sdk';
 const client=new FlashData({apiKey:process.env.FLASHDATA_API_KEY});
 const request:CreateBulkJobRequest={source:'youtube_download',options:{storage:{storage_type:'s3',storage_url:'bucket'}}};
 async function check(){const receipt=await client.google.search({query:'coffee'},{mode:'async'});await client.jobs.wait(receipt.id);const result=await client.google.search({query:'coffee'});const status:string=result.status;void status;}
 void request;void check;
+async function formats(accept:ResponseAccept){
+const text:string=await client.google.search({query:'coffee'},{accept:'text/plain'});
+const markdown:MarkdownQueryResult=await client.youtube.transcript({video_id:'dQw4w9WgXcQ'},{respondWith:'markdown'});
+const stored:MarkdownQueryResult=await client.jobs.result('job_example',{respondWith:'markdown'});
+const receipt:string=await client.queries.submit({source:'google_search',query:'coffee'},{accept:'text/plain'});
+const status:string=await client.jobs.get('job_example',{accept:'text/plain'});
+const variable=await client.google.search({query:'coffee'},{accept});
+// @ts-expect-error background helpers do not accept Markdown
+await client.google.search({query:'coffee'},{mode:'async',respondWith:'markdown'});
+// @ts-expect-error realtime helpers do not accept callbacks
+await client.google.search({query:'coffee'},{callback_url:'https://callback.example/done'});
+void [text,markdown,stored,receipt,status,variable];
+}
+void formats;
 `;
   for (const extension of ['mts', 'cts'])
     await writeFile(join(consumer, 'consumer.' + extension), types);
@@ -108,7 +122,15 @@ void request;void check;
     ],
     consumer,
   );
-  const body = `const client=new FlashData({apiKey:process.env.FLASHDATA_API_KEY,fetch:async()=>new Response(JSON.stringify({source:'google_search',status:'done',created_at:'now',usage:{credits:0},results:[{organic:[{title:'Coffee'}]}]}))});const result=await client.google.search({query:'coffee'});if(result.results[0].organic[0].title!=='Coffee')throw Error('Bad result');`;
+  const body = `const client=new FlashData({apiKey:process.env.FLASHDATA_API_KEY,fetch:async(_url,init)=>{
+const headers=new Headers(init.headers);
+if(headers.get('accept')==='text/plain')return new Response('Source: "google_search"\\nStatus: "done"\\n');
+if(headers.get('x-respond-with')==='markdown')return Response.json({source:'google_search',status:'done',content:'# Coffee\\n'});
+return Response.json({source:'google_search',status:'done',created_at:'now',usage:{credits:0},results:[{organic:[{title:'Coffee'}]}]});
+}});const result=await client.google.search({query:'coffee'});if(result.results[0].organic[0].title!=='Coffee')throw Error('Bad result');
+if(typeof await client.google.search({query:'coffee'},{accept:'text/plain'})!=='string')throw Error('Bad text');
+if(!(await client.google.search({query:'coffee'},{respondWith:'markdown'})).content.includes('Coffee'))throw Error('Bad Markdown');
+if(typeof await client.jobs.result('job_example',{accept:'text/plain',respondWith:'markdown'})!=='string')throw Error('Bad stored text');`;
   await writeFile(
     join(consumer, 'consumer.mjs'),
     `import {FlashData} from '@flashdata-dev/sdk';${body}`,

@@ -4,7 +4,7 @@
 
 ## Submit, save, wait, retrieve
 
-Stored background results have `id`, `source`, `status`, `results`, `completed_at`, and
+By default, stored background results have `id`, `source`, `status`, `results`, `completed_at`, and
 `expires_at`. Data results also include `usage`; media delivery receipts may omit it.
 Unlike realtime responses, stored results do not include a guaranteed `created_at`.
 
@@ -25,7 +25,7 @@ Jobs progress through `pending`, `processing`, `completed`, or `failed`. `get(id
 the HTTP response's `job` property. `wait(id)` returns the completed record or raises
 `JobFailedError` with `.job`. A polling timeout preserves `.jobId`; resume the same ID.
 
-`result(id)` retrieves an object with `id`, `source`, `status`, `results`, `usage`,
+By default, `result(id)` retrieves an object with `id`, `source`, `status`, `results`, `usage`,
 `completed_at`, and `expires_at`. The payloads in `results` follow the source field paths
 used in realtime calls. The helper validates signed storage redirects against authenticated
 discovery and fetches storage without an API key. Export results within the 24-hour
@@ -64,3 +64,10 @@ There is no standard-job list or cancellation endpoint for API keys. Keep your o
 metadata and IDs. If submission loses its response, do not blindly retry; see
 [unknown submissions and recovery](errors.md). The runnable background example supports
 `--job-id` to resume without creating another query.
+
+## Response formats
+
+Submission, batch and status methods accept `{ accept: 'text/plain' }` for text.
+Keep JSON receipts when saving IDs programmatically. Choose Markdown when retrieving
+completed content with `jobs.result(id, { respondWith: 'markdown' })`. Format choices
+apply to each call and are not saved with the job. See [response formats](response-formats.md).

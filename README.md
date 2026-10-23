@@ -103,9 +103,42 @@ for (const payload of response.results) {
 }
 ```
 
-Responses are ordinary objects. The outer `results` array contains source payloads;
+By default, responses are ordinary objects. The outer `results` array contains source payloads;
 Google web hits are inside each payload's `organic` list. Charged credits are in
 `response.usage.credits`. Other sources have their own field paths.
+
+## Choose a response format
+
+JSON objects remain the default. Pass `accept: 'text/plain'` for a string, or
+`respondWith: 'markdown'` for Markdown content, in the second argument.
+
+| `accept`                       | `respondWith` | Result                            |
+| ------------------------------ | ------------- | --------------------------------- |
+| `'application/json'` (default) | Omitted       | Object with original `results`    |
+| `'text/plain'`                 | Omitted       | Original fields as text           |
+| `'application/json'` (default) | `'markdown'`  | Object with Markdown in `content` |
+| `'text/plain'`                 | `'markdown'`  | Metadata followed by Markdown     |
+
+```javascript
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: process.env.FLASHDATA_API_KEY });
+const response = await client.google.search(
+  { query: 'vector databases' },
+  { respondWith: 'markdown' },
+);
+console.log(response.content);
+const text = await client.youtube.transcript(
+  { video_id: 'dQw4w9WgXcQ', language: 'en', auto: false },
+  { accept: 'text/plain', respondWith: 'markdown' },
+);
+console.log(text);
+```
+
+`accept` also works on background submissions, batches and `jobs.get()`.
+Choose Markdown for completed jobs with `jobs.result(id, { respondWith: 'markdown' })`.
+Formatting a completed result does not repeat the query or charge query credits.
+See [response formats](docs/response-formats.md) for supported methods and TypeScript examples.
 
 ## Follow industry news
 

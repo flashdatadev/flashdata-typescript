@@ -3,7 +3,7 @@
   "info": {
     "title": "FlashData Developer API",
     "version": "1.0.0",
-    "description": "API-key authenticated data, jobs, bulk collections and account reads, plus public discovery. Source snapshot: 2026-10-19."
+    "description": "API-key authenticated data, jobs, bulk collections and account reads, plus public discovery. Includes JSON, plain-text and Markdown response options."
   },
   "servers": [
     {
@@ -173,7 +173,7 @@
           "Credits"
         ],
         "summary": "Read the live account balance using an API key",
-        "description": "Free X-API-Key read of the authenticated account's Redis balance, shared by\nall account keys. In-flight reservations can affect the balance. Does not\nfabricate reservedCredits, fall back to Mongo, or turn failures into zero.\nNo query parameters or request body. Shares the /api-access read limit;\nresponses are private, no-store. Does not reserve or spend Credits.\n",
+        "description": "Read the current credit balance shared by all API keys in your account. Active reservations can reduce the available balance. This request costs no Credits and takes no query parameters or body. Responses are private and are not cached; account-read rate limits apply.",
         "security": [
           {
             "dataApiKey": []
@@ -212,7 +212,7 @@
           "Credits"
         ],
         "summary": "Read actual account prices for sources authorized by the API key",
-        "description": "Free X-API-Key read of live subscription prices, restricted to granted\nsources. Missing prices are unavailable with null values, never replaced\nwith Catalog defaults. request_count counts calls, not search results;\ndownload estimates instead expose the per-TB rate (10^12 bytes).\nEstimates do not reserve Credits or guarantee future admission.\nOnly the documented query parameters are accepted; no request body.\nShares the /api-access read limit; responses are private, no-store.\n",
+        "description": "Read your account rates for sources allowed by the API key. A null price means that source is unavailable. request_count counts queries, not returned items; download rates are per TB (10^12 bytes). Estimates do not reserve Credits or capacity. This request costs no Credits. Responses are private and are not cached; account-read rate limits apply.",
         "security": [
           {
             "dataApiKey": []
@@ -275,7 +275,7 @@
           "Credits"
         ],
         "summary": "Read account plan limits and current pending jobs using an API key",
-        "description": "Free X-API-Key read of account-wide concurrency, batch and pending ceilings,\nplus the current pending count. These separate snapshots do not represent\nremaining concurrency slots or an atomic admission promise. No query\nparameters or request body. Shares the /api-access read limit; responses\nare private, no-store. Does not reserve or spend Credits.\n",
+        "description": "Read your concurrency, batch-size and pending-job limits, plus the current pending count. These values help plan requests but do not reserve capacity. This request costs no Credits and takes no query parameters or body. Responses are private and are not cached; account-read rate limits apply.",
         "security": [
           {
             "dataApiKey": []
@@ -399,12 +399,16 @@
           "Jobs"
         ],
         "summary": "Read one Data API job",
+        "description": "Read job.status to check progress and job.error if processing failed. JSON is the default; use Accept: text/plain for readable text. X-Respond-With is ignored here. Follow Retry-After when provided before checking again.",
         "security": [
           {
             "dataApiKey": []
           }
         ],
         "parameters": [
+          {
+            "$ref": "#/components/parameters/ResponseEnvelopeAccept"
+          },
           {
             "name": "jobId",
             "in": "path",
@@ -432,6 +436,12 @@
                     }
                   }
                 }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "Job:\n  Id: \"job_example\"\n  Source: \"google_search\"\n  Status: \"processing\"\n"
               }
             }
           },
@@ -440,6 +450,16 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "description": "Neither application/json nor text/plain is acceptable; response is JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryRepresentationError"
+                }
+              }
+            }
           }
         }
       }
@@ -492,8 +512,8 @@
         "tags": [
           "Bulk Jobs"
         ],
-        "summary": "Create a bulk YouTube job and obtain a direct R2 upload URL",
-        "description": "Creates an awaiting-upload coordinator record. Upload a UTF-8 text file containing one 11-character YouTube video ID per line to upload.href, then call the start operation. The file can be streamed and may contain millions of IDs.",
+        "summary": "Create a Bulk job and get a file upload URL",
+        "description": "Create a job, upload a UTF-8 text file with one 11-character YouTube video ID per line to upload.href, then call start. Creating the job alone does not begin processing.",
         "security": [
           {
             "dataApiKey": []
@@ -573,8 +593,8 @@
         "tags": [
           "Bulk Jobs"
         ],
-        "summary": "Change parameters for IDs that have not yet been admitted",
-        "description": "Partially merges options into the encrypted bulk configuration. This is allowed while awaiting upload or while paused before input scanning completes. Already-admitted child jobs keep the parameters with which they were created. A pause may briefly finish its current admission slice; retry a 409 update after the coordinator releases that slice. Set callback_url to null to clear it.",
+        "summary": "Change settings for videos that have not started",
+        "description": "Update options while awaiting upload, or while paused before all input has been read. Existing jobs keep their settings. If pausing is still in progress, wait and retry a 409 response. After all input has been read, only delivery credentials can be updated. Set callback_url to null to remove it.",
         "security": [
           {
             "dataApiKey": []
@@ -625,8 +645,8 @@
         "tags": [
           "Bulk Jobs"
         ],
-        "summary": "Stop admitting new items for a bulk job",
-        "description": "Already-admitted child jobs may finish and retain their normal charges.",
+        "summary": "Cancel a Bulk job",
+        "description": "Stop new submissions. Existing jobs can still finish and incur their normal charges. A cancelled job does not publish a final manifest.",
         "security": [
           {
             "dataApiKey": []
@@ -664,7 +684,7 @@
           "Bulk Jobs"
         ],
         "summary": "Start scanning an uploaded YouTube ID file",
-        "description": "Accepts a non-empty UTF-8 video ID file up to 2 GiB (2147483648 bytes). Pins the uploaded object's size and ETag before any child job is admitted.",
+        "description": "Start processing the uploaded UTF-8 video ID file, up to 2 GiB (2147483648 bytes). Keep the file unchanged after starting.",
         "security": [
           {
             "dataApiKey": []
@@ -710,8 +730,8 @@
         "tags": [
           "Bulk Jobs"
         ],
-        "summary": "Pause bulk admission and coordinator finalization",
-        "description": "Stops admitting new child jobs and suspends coordinator finalization. A child job already admitted to a worker queue is not interrupted and keeps its original parameters and charge.",
+        "summary": "Pause a Bulk job",
+        "description": "Pause new submissions and result packaging. Existing jobs continue with their original settings and charges. Resume the job when ready.",
         "security": [
           {
             "dataApiKey": []
@@ -786,7 +806,7 @@
           "Bulk Jobs"
         ],
         "summary": "Download the completed bulk manifest",
-        "description": "Redirects to private R2. The manifest and its result parts remain available for 24 hours after the entire bulk job completes; management never proxies result bytes.",
+        "description": "Follow the redirect to download the JSON manifest and use its links to retrieve result files. Fetch signed storage URLs without your API key. Results remain available for 24 hours after the entire Bulk job completes.",
         "security": [
           {
             "dataApiKey": []
@@ -799,7 +819,7 @@
         ],
         "responses": {
           "200": {
-            "description": "JSON manifest returned by R2 after the client follows the redirect",
+            "description": "JSON manifest downloaded after following the redirect",
             "content": {
               "application/json": {
                 "schema": {
@@ -855,7 +875,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Gzip-compressed NDJSON returned by R2 after the client follows the redirect",
+            "description": "Gzip-compressed NDJSON downloaded after following the redirect",
             "content": {
               "application/x-ndjson": {
                 "schema": {
@@ -889,13 +909,19 @@
           "Jobs"
         ],
         "summary": "Download a completed async result",
-        "description": "Authenticates access and redirects to a short-lived private R2 URL. The management service never proxies the result body. Clients that follow the redirect receive the JSON result directly from R2. Stored results expire 24 hours after completion.",
+        "description": "By default, authenticates access and redirects to a short-lived private R2 URL; clients receive the original JSON directly from R2. Accept: text/plain independently returns HTTP 200 with the original result fields as indented plain text. X-Respond-With: markdown selects Markdown content: application/json wraps it in content alongside the original metadata, replacing results; text/plain returns metadata followed by Markdown. Missing Accept or a global wildcard defaults to JSON. Formatting does not submit another query or charge query credits. Stored results expire 24 hours after completion. Errors remain structured JSON.",
         "security": [
           {
             "dataApiKey": []
           }
         ],
         "parameters": [
+          {
+            "$ref": "#/components/parameters/QueryRepresentation"
+          },
+          {
+            "$ref": "#/components/parameters/QueryRepresentationAccept"
+          },
           {
             "name": "jobId",
             "in": "path",
@@ -908,18 +934,38 @@
         ],
         "responses": {
           "200": {
-            "description": "Completed result returned by R2 after the client follows the redirect",
+            "description": "Plain-text original fields or Markdown returned directly; original JSON from R2 after following the default redirect",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "additionalProperties": true
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MarkdownQueryResult"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  ]
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "original": {
+                    "value": "Source: \"google_search\"\nStatus: \"completed\"\nResults:\n  1:\n    Organic: []\n"
+                  },
+                  "markdown": {
+                    "value": "Source: \"google_search\"\nStatus: \"completed\"\n\nMarkdown Content:\n# Google search\n"
+                  }
                 }
               }
             }
           },
           "302": {
-            "description": "Redirect to the completed JSON result in private R2 storage",
+            "description": "Redirect to original JSON in private R2 storage when JSON is selected without X-Respond-With",
             "headers": {
               "Location": {
                 "description": "Short-lived presigned R2 URL",
@@ -931,11 +977,31 @@
               }
             }
           },
+          "400": {
+            "description": "Unsupported X-Respond-With value; response is JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryRepresentationError"
+                }
+              }
+            }
+          },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "406": {
+            "description": "Neither application/json nor text/plain is acceptable; response is JSON",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryRepresentationError"
+                }
+              }
+            }
           },
           "409": {
             "$ref": "#/components/responses/Conflict"
@@ -1035,7 +1101,47 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DataQueryResponse"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/DataQueryResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/MarkdownQueryResult"
+                    }
+                  ]
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                },
+                "examples": {
+                  "original": {
+                    "value": "Source: \"google_search\"\nStatus: \"done\"\nResults:\n  1:\n    Organic: []\n"
+                  },
+                  "markdown": {
+                    "value": "Source: \"google_search\"\nStatus: \"done\"\n\nMarkdown Content:\n# Google search\n"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query input or unsupported X-Respond-With value. Correct the request before retrying.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataQueryError"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Unsupported Accept type. Use application/json or text/plain.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryRepresentationError"
                 }
               }
             }
@@ -1043,7 +1149,16 @@
           "default": {
             "description": "Query rejected or upstream unavailable. Inspect the HTTP status, code and message; see /docs/errors."
           }
-        }
+        },
+        "description": "Return query results in the same response. JSON is the default; use Accept: text/plain for readable text. Add X-Respond-With: markdown to replace the results array with Markdown content while keeping source, status, usage and timestamps. Without it, the original fields are returned. Errors use JSON. See /docs/guides/response-formats for examples.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/QueryRepresentation"
+          },
+          {
+            "$ref": "#/components/parameters/QueryRepresentationAccept"
+          }
+        ]
       }
     },
     "/v1/queries": {
@@ -1127,13 +1242,34 @@
                 "schema": {
                   "$ref": "#/components/schemas/AsyncSubmission"
                 }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Unsupported Accept type. Use application/json or text/plain.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryRepresentationError"
+                }
               }
             }
           },
           "default": {
             "description": "Query rejected or upstream unavailable. Inspect the HTTP status, code and message; see /docs/errors."
           }
-        }
+        },
+        "description": "Return a receipt for each accepted job. JSON is the default; use Accept: text/plain for readable text. X-Respond-With is ignored here. To receive Markdown results, set that header when retrieving each completed job's results. Errors use JSON.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ResponseEnvelopeAccept"
+          }
+        ]
       }
     },
     "/v1/queries/batch": {
@@ -1215,7 +1351,7 @@
                         }
                       ]
                     },
-                    "description": "Maximum size and pending-job admission depend on your account's current plan."
+                    "description": "Batch size and pending-job limits depend on your plan."
                   }
                 }
               }
@@ -1249,13 +1385,34 @@
                     }
                   }
                 }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Unsupported Accept type. Use application/json or text/plain.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueryRepresentationError"
+                }
               }
             }
           },
           "default": {
             "description": "Query rejected or upstream unavailable. Inspect the HTTP status, code and message; see /docs/errors."
           }
-        }
+        },
+        "description": "Return a receipt for each accepted job. JSON is the default; use Accept: text/plain for readable text. X-Respond-With is ignored here. To receive Markdown results, set that header when retrieving each completed job's results. Errors use JSON.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ResponseEnvelopeAccept"
+          }
+        ]
       }
     }
   },
@@ -1270,7 +1427,7 @@
     },
     "headers": {
       "CacheControlPublic": {
-        "description": "Allows short public caching with bounded stale reuse for resilient SSR",
+        "description": "Public cache duration and stale-response policy",
         "schema": {
           "type": "string",
           "const": "public, max-age=60, stale-while-revalidate=300"
@@ -1293,6 +1450,49 @@
         "schema": {
           "type": "string",
           "maxLength": 512
+        }
+      },
+      "ResponseEnvelopeAccept": {
+        "name": "Accept",
+        "in": "header",
+        "description": "application/json returns the original structured response; text/plain returns the same fields as indented plain text. Standard media ranges and q weights are supported; missing Accept or a global wildcard defaults to JSON. X-Respond-With is ignored on submission and job-status endpoints. Errors remain structured JSON. Both response types use UTF-8; an explicit charset=utf-8 parameter is supported.",
+        "schema": {
+          "type": "string"
+        },
+        "examples": {
+          "json": {
+            "value": "application/json"
+          },
+          "plain": {
+            "value": "text/plain"
+          }
+        }
+      },
+      "QueryRepresentation": {
+        "name": "X-Respond-With",
+        "in": "header",
+        "description": "Set to markdown to return result content as Markdown. Omit to retain the original result fields. Accept independently selects JSON or plain text. Only realtime queries and completed job result reads support this header. It does not change job submissions, status, account APIs, callbacks, Bulk files, binary downloads, or MCP protocol responses.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "markdown"
+          ]
+        }
+      },
+      "QueryRepresentationAccept": {
+        "name": "Accept",
+        "in": "header",
+        "description": "Select application/json or text/plain independently of X-Respond-With. Without X-Respond-With, text/plain returns the original fields with indentation; JSON retains the original response fields (completed-result reads redirect to storage). With markdown, JSON returns content plus metadata and plain text returns metadata followed by Markdown. Standard media ranges and q weights are supported; missing Accept or a global wildcard defaults to JSON. Both response types use UTF-8; an explicit charset=utf-8 parameter is supported.",
+        "schema": {
+          "type": "string"
+        },
+        "examples": {
+          "json": {
+            "value": "application/json"
+          },
+          "plain": {
+            "value": "text/plain"
+          }
         }
       }
     },
@@ -1726,14 +1926,14 @@
                 "minLength": 2,
                 "maxLength": 2,
                 "pattern": "^[A-Za-z]{2}$",
-                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "hl": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z0-9-]+$",
-                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "location": {
                 "type": "string",
@@ -1801,14 +2001,14 @@
                 "minLength": 2,
                 "maxLength": 2,
                 "pattern": "^[A-Za-z]{2}$",
-                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "hl": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z0-9-]+$",
-                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "location": {
                 "type": "string",
@@ -1876,14 +2076,14 @@
                 "minLength": 2,
                 "maxLength": 2,
                 "pattern": "^[A-Za-z]{2}$",
-                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "hl": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z0-9-]+$",
-                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "location": {
                 "type": "string",
@@ -1951,14 +2151,14 @@
                 "minLength": 2,
                 "maxLength": 2,
                 "pattern": "^[A-Za-z]{2}$",
-                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "hl": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z0-9-]+$",
-                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "location": {
                 "type": "string",
@@ -2026,14 +2226,14 @@
                 "minLength": 2,
                 "maxLength": 2,
                 "pattern": "^[A-Za-z]{2}$",
-                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "hl": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z0-9-]+$",
-                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "location": {
                 "type": "string",
@@ -2101,14 +2301,14 @@
                 "minLength": 2,
                 "maxLength": 2,
                 "pattern": "^[A-Za-z]{2}$",
-                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "hl": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z0-9-]+$",
-                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "location": {
                 "type": "string",
@@ -3375,7 +3575,12 @@
             }
           }
         },
-        "description": "Source-specific JSON results. See the source reference for response fields and examples."
+        "description": "Source-specific JSON results. See the source reference for response fields and examples.",
+        "required": [
+          "source",
+          "status",
+          "results"
+        ]
       },
       "DataSource": {
         "type": "object",
@@ -3939,14 +4144,14 @@
                 "minLength": 2,
                 "maxLength": 2,
                 "pattern": "^[A-Za-z]{2}$",
-                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "hl": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z0-9-]+$",
-                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "location": {
                 "type": "string",
@@ -4006,14 +4211,14 @@
                 "minLength": 2,
                 "maxLength": 2,
                 "pattern": "^[A-Za-z]{2}$",
-                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "hl": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z0-9-]+$",
-                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "location": {
                 "type": "string",
@@ -4073,14 +4278,14 @@
                 "minLength": 2,
                 "maxLength": 2,
                 "pattern": "^[A-Za-z]{2}$",
-                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "hl": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z0-9-]+$",
-                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "location": {
                 "type": "string",
@@ -4140,14 +4345,14 @@
                 "minLength": 2,
                 "maxLength": 2,
                 "pattern": "^[A-Za-z]{2}$",
-                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "hl": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z0-9-]+$",
-                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "location": {
                 "type": "string",
@@ -4207,14 +4412,14 @@
                 "minLength": 2,
                 "maxLength": 2,
                 "pattern": "^[A-Za-z]{2}$",
-                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "hl": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z0-9-]+$",
-                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "location": {
                 "type": "string",
@@ -4274,14 +4479,14 @@
                 "minLength": 2,
                 "maxLength": 2,
                 "pattern": "^[A-Za-z]{2}$",
-                "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "hl": {
                 "type": "string",
                 "minLength": 1,
                 "maxLength": 35,
                 "pattern": "^[A-Za-z0-9-]+$",
-                "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+                "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
               },
               "location": {
                 "type": "string",
@@ -4389,235 +4594,6 @@
         "description": "YouTube Channel. Supported modes: realtime, async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
         "externalDocs": {
           "url": "https://flashdata.dev/docs/sources/youtube_channel"
-        }
-      },
-      "Query_youtube_download": {
-        "type": "object",
-        "required": [
-          "source",
-          "video_id",
-          "params"
-        ],
-        "properties": {
-          "source": {
-            "type": "string",
-            "const": "youtube_download"
-          },
-          "video_id": {
-            "type": "string",
-            "minLength": 11,
-            "maxLength": 11,
-            "pattern": "^[A-Za-z0-9_-]{11}$"
-          },
-          "params": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "download_type": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 11,
-                "default": "audio_video",
-                "enum": [
-                  "audio_video",
-                  "video",
-                  "audio"
-                ]
-              },
-              "video_quality": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 40,
-                "default": "<=720",
-                "enum": [
-                  "best",
-                  "worst",
-                  "<=144",
-                  "==144",
-                  ">=144",
-                  "<=360",
-                  "==360",
-                  ">=360",
-                  "<=480",
-                  "==480",
-                  ">=480",
-                  "<=720",
-                  "==720",
-                  ">=720",
-                  "<=1080",
-                  "==1080",
-                  ">=1080",
-                  "<=1440",
-                  "==1440",
-                  ">=1440",
-                  "<=2160",
-                  "==2160",
-                  ">=2160",
-                  "<=4320",
-                  "==4320",
-                  ">=4320"
-                ]
-              },
-              "fps": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 6,
-                "pattern": "^(?:>=|<=|==)(?:[1-9]\\d?|1\\d\\d|2[0-3]\\d|240)$"
-              },
-              "audio_language": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 8,
-                "default": "default",
-                "enum": [
-                  "default",
-                  "original"
-                ]
-              },
-              "audio_quality": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 10,
-                "default": "best",
-                "enum": [
-                  "best",
-                  "320",
-                  "256",
-                  "192",
-                  "128"
-                ]
-              },
-              "yt_dlp_format": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 1024
-              },
-              "upload_metadata": {
-                "type": "boolean",
-                "default": false
-              },
-              "output_format": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 10,
-                "default": "mp4",
-                "enum": [
-                  "mp4",
-                  "webm",
-                  "mkv",
-                  "m4a",
-                  "mp3",
-                  "opus"
-                ]
-              },
-              "start_at": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 8,
-                "pattern": "^\\d{1,2}:[0-5]\\d:[0-5]\\d$"
-              },
-              "end_at": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 8,
-                "pattern": "^\\d{1,2}:[0-5]\\d:[0-5]\\d$"
-              },
-              "storage": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "storage_type",
-                  "storage_url"
-                ],
-                "description": "Customer-owned destination, using the same fields as Download API params.storage. Supply credentials from your configured storage; do not invent values or display secrets. GCS uses service_account; Azure uses account_name and a container SAS with write permission; other providers use access_key/secret_key and provider endpoint/region as needed.",
-                "properties": {
-                  "storage_type": {
-                    "type": "string",
-                    "enum": [
-                      "azure",
-                      "bos",
-                      "cos",
-                      "gcs",
-                      "oss",
-                      "s3",
-                      "s3_compatible",
-                      "tos"
-                    ]
-                  },
-                  "storage_url": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 1024,
-                    "description": "Bucket name (Azure: container name). Not a local path or a full object URL."
-                  },
-                  "object_prefix": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 513,
-                    "description": "Optional object folder prefix. Use a distinct prefix when keeping multiple versions of a video."
-                  },
-                  "access_key": {
-                    "type": "string",
-                    "maxLength": 4096
-                  },
-                  "secret_key": {
-                    "type": "string",
-                    "maxLength": 4096
-                  },
-                  "endpoint_url": {
-                    "type": "string",
-                    "maxLength": 4096,
-                    "description": "Provider endpoint, required for S3-compatible storage. Must be reachable from the download Worker."
-                  },
-                  "region": {
-                    "type": "string",
-                    "maxLength": 4096
-                  },
-                  "account_name": {
-                    "type": "string",
-                    "pattern": "^[a-z0-9]{3,24}$"
-                  },
-                  "sas_token": {
-                    "type": "string",
-                    "maxLength": 4097,
-                    "description": "Azure container SAS with write permission; never return this secret to the user in output."
-                  },
-                  "service_account": {
-                    "type": "object",
-                    "required": [
-                      "project_id",
-                      "client_email",
-                      "private_key"
-                    ],
-                    "properties": {
-                      "project_id": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 256
-                      },
-                      "client_email": {
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      "private_key": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 16384
-                      }
-                    },
-                    "additionalProperties": true
-                  }
-                }
-              }
-            },
-            "required": [
-              "storage"
-            ]
-          }
-        },
-        "description": "YouTube Download. Supported modes: async, batch. Provider-specific storage requirements and conditional media options are validated by the server; see the source reference.",
-        "externalDocs": {
-          "url": "https://flashdata.dev/docs/sources/youtube_download"
         }
       },
       "Query_youtube_metadata": {
@@ -5055,6 +5031,78 @@
             "type": "number",
             "minimum": 0,
             "description": "Charged Credits in the current aggregate; pending work may not be finally settled."
+          }
+        }
+      },
+      "QueryRepresentationError": {
+        "type": "object",
+        "required": [
+          "error",
+          "code",
+          "message"
+        ],
+        "properties": {
+          "error": {
+            "type": "boolean",
+            "const": true
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "unsupported_representation",
+              "not_acceptable"
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "MarkdownQueryResult": {
+        "type": "object",
+        "required": [
+          "source",
+          "status",
+          "content"
+        ],
+        "additionalProperties": true,
+        "description": "Markdown result content. content replaces the results array; other response fields such as id, source, status, usage and timestamps are preserved. No generated summary is added. Source URLs and transcript segment start/end times are retained.",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "description": "Deterministic Markdown derived from the retrieved source result."
+          },
+          "usage": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "DataQueryError": {
+        "type": "object",
+        "required": [
+          "error",
+          "message"
+        ],
+        "properties": {
+          "error": {
+            "type": "boolean",
+            "const": true
+          },
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "field": {
+            "type": "string"
           }
         }
       }

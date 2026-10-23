@@ -24,3 +24,12 @@ the service changes. Keep request validation separate from provider result assum
 The default suite executes source examples and documentation with isolated API fixtures;
 opt-in live tests verify the production contract. The TypeDoc site is generated locally,
 and no workflow publishes packages or documentation.
+
+Response preferences are per-call HTTP headers. Realtime queries and completed results
+support Markdown; receipts and status support JSON or text. Other resources retain
+their original formats. Tests use a copy of the API's pure serializer and stored-result
+examples that preserve job metadata in all four formats for all 15 sources.
+
+Refresh the API snapshot and fixtures with `node scripts/update-contract.mjs --openapi PATH_TO_PUBLIC_OPENAPI_JSON --formatter PATH_TO_RESPONSE_FORMATTING_JS`.
+Add `--check` to compare without writing. The normal SDK tests use checked-in fixtures
+and do not need a backend checkout.

@@ -68,3 +68,9 @@ main().catch((error) => {
 Run `node examples/commonjs.cjs coffee` for a runnable CommonJS CLI. Package verification
 installs the archive into an independent application and checks runtime imports plus
 strict ESM/CommonJS TypeScript consumers.
+
+## Typed response formats
+
+Return types follow `accept` and `respondWith`: original objects, `MarkdownQueryResult`
+or strings. Literal options preserve precise types; variable choices produce unions.
+Use `satisfies ContentOptions` for reusable format options. See [response formats](response-formats.md).
