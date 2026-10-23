@@ -2,6 +2,17 @@
 
 [FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
 
+## Install
+
+Use Node.js 22 or newer:
+
+```sh
+npm install @flashdata-dev/sdk@^1.1.0
+```
+
+Version 1.1.0 adds plain-text and Markdown responses. See the
+[release notes](release-notes-1.1.0.md).
+
 ## Install from source
 
 Use Node.js 22 or newer. In this repository, install dependencies and build:
@@ -13,7 +24,7 @@ node examples/offline.mjs
 ```
 
 Create a local npm archive with `npm pack`, then install that file in another application
-with `npm install /absolute/path/to/flashdata-dev-sdk-1.0.0.tgz`. No registry release is
+with `npm install /absolute/path/to/flashdata-dev-sdk-1.1.0.tgz`. No registry release is
 required for this workflow. Examples import `@flashdata-dev/sdk`; after a build, that
 same package import works from inside this checkout through Node's package self-reference.
 

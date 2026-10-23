@@ -46,8 +46,8 @@ and AI model calls.
 npm install @flashdata-dev/sdk
 ```
 
-This command requires FlashData's official npm publication. For local testing before
-release, use [installation from source](#install-from-source). Run the SDK on your server.
+Use version 1.1.0 or newer for plain-text and Markdown response options.
+For development, see [installation from source](#install-from-source). Run the SDK on your server.
 
 For a TypeScript application, also install the compiler and Node.js types as development
 dependencies; the SDK includes its own API types:
@@ -108,6 +108,8 @@ Google web hits are inside each payload's `organic` list. Charged credits are in
 `response.usage.credits`. Other sources have their own field paths.
 
 ## Choose a response format
+
+Available in `@flashdata-dev/sdk` 1.1.0 or newer.
 
 JSON objects remain the default. Pass `accept: 'text/plain'` for a string, or
 `respondWith: 'markdown'` for Markdown content, in the second argument.

@@ -182,7 +182,7 @@ export class FlashData {
       if (v !== undefined) url.searchParams.set(k, String(v));
     const headers: Record<string, string> = {
       Accept: format.accept,
-      'User-Agent': 'flashdata-typescript/1.0.0',
+      'User-Agent': 'flashdata-typescript/1.1.0',
     };
     if (format.respondWith !== undefined) headers['X-Respond-With'] = format.respondWith;
     if (!options.public) headers['X-API-Key'] = this.#key;

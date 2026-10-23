@@ -42,7 +42,7 @@ SDK 提供请求与响应类型、参数校验、结构化错误、限制页数�
 npm install @flashdata-dev/sdk
 ```
 
-以上命令需在 FlashData 正式发布到 npm 后使用。发布前的本地测试请参阅[从源码安装](#从源码安装)。
+纯文本与 Markdown 响应选项需要 1.1.0 或更新版本。开发时可使用[源码安装](#从源码安装)。
 请在服务端运行 SDK。
 
 TypeScript 应用还需将编译器和 Node.js 类型定义安装为开发依赖。SDK 自身的 API 类型已随包提供：
@@ -99,6 +99,8 @@ Google 网页搜索条目位于其中的 `organic` 列表中。
 本次请求消耗的积分（Credits）位于 `response.usage.credits`。其他数据源使用各自的字段路径。
 
 ## 选择响应格式
+
+需要 `@flashdata-dev/sdk` 1.1.0 或更新版本。
 
 默认返回 JSON 对象。在第二个参数中设置 `accept: 'text/plain'` 返回字符串，
 或设置 `respondWith: 'markdown'` 选择 Markdown 内容。

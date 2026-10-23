@@ -10,7 +10,7 @@ Cross-SDK review: corrected stored background result types, allowed nullable dat
 storage, validated CLI waiting arguments before submission, preserved structured partial
 failures, documented Python/TypeScript parity, and linked every guide to official FlashData pages.
 
-## Unreleased
+## 1.1.0 — 2026-10-23
 
 - Add per-call `accept` and `respondWith` to realtime helpers and completed results;
   JSON remains the default. Plain-text receipts, batches and status are also supported.
@@ -21,7 +21,7 @@ failures, documented Python/TypeScript parity, and linked every guide to officia
 
 Align English/Chinese workflow navigation with all SDKs and the CLI. Bulk examples now reserve exports and recovery records before API calls, sync accepted IDs, preserve orphaned records, check every item status and recover without replay. Add an MP3 audio variant and update the side-by-side comparison.
 
-## 1.0.0 — local release candidate
+## 1.0.0
 
 - Fixed polling deadline errors for standard and bulk jobs when status timers fire early.
   Shorter client network timeouts keep their original error type.
@@ -38,5 +38,3 @@ Align English/Chinese workflow navigation with all SDKs and the CLI. Bulk exampl
 - Bounded, validated gzip/UTF-8 result readers; all-part and cursor iterators; cached signed-storage discovery.
 - Public discovery without a key, structured error details and local JSON validation before dispatch.
 - Executable documentation, a local TypeDoc site and an explicit paid integration suite.
-
-GitHub and package-registry publication have not been performed.
