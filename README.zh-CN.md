@@ -232,6 +232,8 @@ for (const track of response.results) {
 `captions` 默认选择上传的字幕轨道（`auto: false`），`transcript` 默认选择自动生成的轨道（`auto: true`）。
 请指定视频实际拥有的语言和轨道。轨道不存在时，API 会返回错误；服务不会生成或翻译字幕。
 
+转录和字幕支持单个语言代码或 1–10 个代码的列表。省略语言时优先使用 `en-orig`，其次使用 `en`，返回一条字幕。多语言结果保留可用字幕及逐语言错误。参见[字幕语言说明](docs/sources/youtube_transcript.md)。
+
 ## 后台任务与混合批次
 
 ```javascript
@@ -546,4 +548,3 @@ npm pack
 
 默认测试使用注入的 fetch 响应和本地 HTTP 服务。真实 API 测试需要显式启用，详见[贡献指南](CONTRIBUTING.md)。
 项目采用 MIT 许可证。敏感安全问题请按照[安全政策](SECURITY.md)私下报告。
-转录和字幕支持单个语言代码或 1–10 个代码的列表。省略语言时优先使用 `en-orig`，其次使用 `en`，返回一条字幕。多语言结果保留可用字幕及逐语言错误。参见[字幕语言说明](docs/sources/youtube_transcript.md)。
