@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.0 — 2026-11-05
 
 - Support single or multiple transcript/caption languages, omitted-language fallback and per-language results. Other source APIs are unchanged.
 
