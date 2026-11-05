@@ -565,3 +565,4 @@ npm pack
 Default tests use injected fetch responses and a loopback HTTP server. Live tests require
 explicit opt-in; see [contributing](CONTRIBUTING.md). The package is MIT licensed. Report
 sensitive issues through the [security policy](SECURITY.md).
+Transcript and captions accept one language or a list of 1–10 codes. Omit the language to prefer `en-orig`, then `en`. Multi-language results include available tracks and per-language errors. See [subtitle languages](docs/sources/youtube_transcript.md).

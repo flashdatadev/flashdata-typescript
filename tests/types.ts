@@ -620,3 +620,17 @@ async function formatTypes(
   );
 }
 void formatTypes;
+
+async function subtitleLanguages(c: import('../src/index.js').FlashData) {
+  const r = await c.youtube.transcript({ video_id: 'aircAruvnKk', language: ['en', 'es'] });
+  r.results[0]?.tracks?.map((track) => track.fullText);
+  r.results[0]?.errors?.map((error) => error.code);
+  await c.youtube.captions({ video_id: 'aircAruvnKk', language: 'en' });
+  await c.bulk.create({
+    source: 'youtube_captions',
+    options: { language: ['en', 'es'], auto: false },
+  });
+  // @ts-expect-error suggestions still uses one language
+  await c.youtube.suggestions({ query: 'example', language: ['en', 'es'] });
+}
+void subtitleLanguages;

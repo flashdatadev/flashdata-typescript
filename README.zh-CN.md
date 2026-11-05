@@ -546,3 +546,4 @@ npm pack
 
 默认测试使用注入的 fetch 响应和本地 HTTP 服务。真实 API 测试需要显式启用，详见[贡献指南](CONTRIBUTING.md)。
 项目采用 MIT 许可证。敏感安全问题请按照[安全政策](SECURITY.md)私下报告。
+转录和字幕支持单个语言代码或 1–10 个代码的列表。省略语言时优先使用 `en-orig`，其次使用 `en`，返回一条字幕。多语言结果保留可用字幕及逐语言错误。参见[字幕语言说明](docs/sources/youtube_transcript.md)。

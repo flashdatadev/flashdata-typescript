@@ -153,3 +153,10 @@ records after an uncertain create require account/server reconciliation.
 
 Use `bulk_download.mjs` with `--audio` for MP3; the default is MP4.
 Compare [all SDKs and the CLI](sdk-parity.md) for coverage and persistence differences.
+
+## Subtitle languages
+
+For `youtube_transcript` and `youtube_captions`, use shared options such as
+`{"language":["en","es"],"auto":true}`. Omit `language` to prefer `en-orig`, then `en`.
+Bulk exports remain JSONL with one record per video; inspect `tracks` and `errors`
+inside each result for available languages and partial failures.

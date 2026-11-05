@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Support single or multiple transcript/caption languages, omitted-language fallback and per-language results. Other source APIs are unchanged.
+
 [FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
 
 Final local release check: verified Node 22.0.0/24, documented consumer TypeScript/Node

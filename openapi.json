@@ -2373,11 +2373,27 @@
             "additionalProperties": false,
             "properties": {
               "language": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 35,
-                "pattern": "^[A-Za-z0-9-]+$",
-                "default": "en"
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 35,
+                    "pattern": "^[A-Za-z0-9-]+$"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 35,
+                      "pattern": "^[A-Za-z0-9-]+$"
+                    },
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "uniqueItems": true
+                  }
+                ],
+                "description": "Omit to prefer en-orig and fall back to en, returning one track. A string selects that exact language. An array of 1–10 distinct codes returns tracks and per-language errors. The selected caption source applies to every language."
               },
               "auto": {
                 "type": "boolean",
@@ -3088,11 +3104,27 @@
             "additionalProperties": false,
             "properties": {
               "language": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 35,
-                "pattern": "^[A-Za-z0-9-]+$",
-                "default": "en"
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 35,
+                    "pattern": "^[A-Za-z0-9-]+$"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 35,
+                      "pattern": "^[A-Za-z0-9-]+$"
+                    },
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "uniqueItems": true
+                  }
+                ],
+                "description": "Omit to prefer en-orig and fall back to en, returning one track. A string selects that exact language. An array of 1–10 distinct codes returns tracks and per-language errors. The selected caption source applies to every language."
               },
               "auto": {
                 "type": "boolean",
@@ -3539,7 +3571,7 @@
           "options": {
             "type": "object",
             "additionalProperties": true,
-            "description": "Reused for every ID. Metadata accepts include_formats and include_chapters. Transcript and captions accept language and auto. Trainability accepts no source options. These four data sources optionally accept result_storage. Supported storage_type values are s3, s3_compatible, oss, gcs, azure, cos, bos, and tos. storage_url is the bucket name (Azure container name); object_prefix is optional. S3, S3-compatible, OSS, COS, BOS, and TOS use access_key and secret_key. S3-compatible and OSS also require a public HTTPS endpoint_url. COS, BOS, and TOS require region and use fixed provider endpoints. COS bucket names include the APPID. BOS S3-compatible HTTPS delivery supports bj, su, and hkg. GCS requires service_account with project_id, client_email, and private_key. Azure requires account_name and a container SAS sas_token with write permission. Default object_prefix is YYYYMMDD, frozen to the UTC bulk creation date. Files are written to <prefix>/<source>/<bulkId>/results/part-NNNNNNNN.jsonl.gz; manifest.json in the same bulk directory is written last. Each JSONL row includes its input index and completed, failed, or invalid status. Internal R2 results remain available through the result links for 24 hours. Download accepts the normal YouTube download parameters, requires customer storage, and does not permit browser_delivery. Download storage supports the same eight provider types and credential shapes listed above under the storage field. Download storage may include object_prefix; YYYYMMDD tokens resolve to the UTC upload date, while literal prefixes are unchanged."
+            "description": "Reused for every ID. Metadata accepts include_formats and include_chapters. Transcript and captions accept language (one code or 1–10 distinct codes) and auto. Omit language to prefer en-orig, then en, returning one track. Arrays return tracks and per-language errors, including partial failures. Bulk exports remain JSONL, with one record per video. Trainability accepts no source options. These four data sources optionally accept result_storage. Supported storage_type values are s3, s3_compatible, oss, gcs, azure, cos, bos, and tos. storage_url is the bucket name (Azure container name); object_prefix is optional. S3, S3-compatible, OSS, COS, BOS, and TOS use access_key and secret_key. S3-compatible and OSS also require a public HTTPS endpoint_url. COS, BOS, and TOS require region and use fixed provider endpoints. COS bucket names include the APPID. BOS S3-compatible HTTPS delivery supports bj, su, and hkg. GCS requires service_account with project_id, client_email, and private_key. Azure requires account_name and a container SAS sas_token with write permission. Default object_prefix is YYYYMMDD, frozen to the UTC bulk creation date. Files are written to <prefix>/<source>/<bulkId>/results/part-NNNNNNNN.jsonl.gz; manifest.json in the same bulk directory is written last. Each JSONL row includes its input index and completed, failed, or invalid status. Internal R2 results remain available through the result links for 24 hours. Download accepts the normal YouTube download parameters, requires customer storage, and does not permit browser_delivery. Download storage supports the same eight provider types and credential shapes listed above under the storage field. Download storage may include object_prefix; YYYYMMDD tokens resolve to the UTC upload date, while literal prefixes are unchanged."
           },
           "callback_url": {
             "type": "string",
@@ -4543,11 +4575,27 @@
             "additionalProperties": false,
             "properties": {
               "language": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 35,
-                "pattern": "^[A-Za-z0-9-]+$",
-                "default": "en"
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 35,
+                    "pattern": "^[A-Za-z0-9-]+$"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 35,
+                      "pattern": "^[A-Za-z0-9-]+$"
+                    },
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "uniqueItems": true
+                  }
+                ],
+                "description": "Omit to prefer en-orig and fall back to en, returning one track. A string selects that exact language. An array of 1–10 distinct codes returns tracks and per-language errors. The selected caption source applies to every language."
               },
               "auto": {
                 "type": "boolean",
@@ -4965,11 +5013,27 @@
             "additionalProperties": false,
             "properties": {
               "language": {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 35,
-                "pattern": "^[A-Za-z0-9-]+$",
-                "default": "en"
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 35,
+                    "pattern": "^[A-Za-z0-9-]+$"
+                  },
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 35,
+                      "pattern": "^[A-Za-z0-9-]+$"
+                    },
+                    "minItems": 1,
+                    "maxItems": 10,
+                    "uniqueItems": true
+                  }
+                ],
+                "description": "Omit to prefer en-orig and fall back to en, returning one track. A string selects that exact language. An array of 1–10 distinct codes returns tracks and per-language errors. The selected caption source applies to every language."
               },
               "auto": {
                 "type": "boolean",
