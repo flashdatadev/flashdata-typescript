@@ -1,4 +1,4 @@
-import { FlashData, type Source, type RealtimeQuery } from '../src/index.js';
+import { FlashData, type Source, type RealtimeQuery, type StorageConfig } from '../src/index.js';
 const client = new FlashData({ apiKey: 'test' });
 const source: Source = 'google_search';
 const query: RealtimeQuery = { source, query: 'coffee', params: { autocorrect: false } };
@@ -31,12 +31,13 @@ async function typeCoverage() {
   // @ts-expect-error background results have no guaranteed created_at
   const created: string = jobResult.created_at;
   void [completedAt, possibleCredits, created];
-  const storage = {
+  const storage: StorageConfig = {
     storage_type: 's3' as const,
     storage_url: 'bucket',
     region: 'us-east-1',
     access_key: 'test',
     secret_key: 'test',
+    session_token: 'temporary-token',
   };
   await client.bulk.create({ source: 'youtube_download', options: { storage } });
   await client.bulk.create({

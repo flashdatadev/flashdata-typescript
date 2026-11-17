@@ -3,11 +3,11 @@
 [FlashData](https://flashdata.dev) · [API documentation](https://flashdata.dev/docs)
 
 The official package is `@flashdata-dev/sdk` for Node.js 22+.
-Version 1.2.0 adds multiple transcript/caption languages and per-language results.
-Read the [release notes](release-notes-1.2.0.md). Existing single-language calls and
-JSON response defaults remain compatible.
+Version 1.3.0 adds temporary storage credentials through `session_token` for
+S3, S3-compatible storage, OSS, COS, BOS and TOS. Read the
+[release notes](release-notes-1.3.0.md). Existing storage configurations remain compatible.
 
-The [GitHub release](https://github.com/flashdatadev/flashdata-typescript/releases/tag/v1.2.0)
+The [GitHub release](https://github.com/flashdatadev/flashdata-typescript/releases/tag/v1.3.0)
 provides packages from the tagged source. Published registry versions are listed on
 [npm](https://www.npmjs.com/package/@flashdata-dev/sdk). GitHub npm archives can also be installed directly with npm.
 

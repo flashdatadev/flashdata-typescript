@@ -24,14 +24,14 @@
             "minLength": 2,
             "maxLength": 2,
             "pattern": "^[A-Za-z]{2}$",
-            "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+            "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
           },
           "hl": {
             "type": "string",
             "minLength": 1,
             "maxLength": 35,
             "pattern": "^[A-Za-z0-9-]+$",
-            "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+            "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
           },
           "location": {
             "type": "string",
@@ -91,14 +91,14 @@
             "minLength": 2,
             "maxLength": 2,
             "pattern": "^[A-Za-z]{2}$",
-            "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+            "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
           },
           "hl": {
             "type": "string",
             "minLength": 1,
             "maxLength": 35,
             "pattern": "^[A-Za-z0-9-]+$",
-            "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+            "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
           },
           "location": {
             "type": "string",
@@ -158,14 +158,14 @@
             "minLength": 2,
             "maxLength": 2,
             "pattern": "^[A-Za-z]{2}$",
-            "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+            "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
           },
           "hl": {
             "type": "string",
             "minLength": 1,
             "maxLength": 35,
             "pattern": "^[A-Za-z0-9-]+$",
-            "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+            "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
           },
           "location": {
             "type": "string",
@@ -225,14 +225,14 @@
             "minLength": 2,
             "maxLength": 2,
             "pattern": "^[A-Za-z]{2}$",
-            "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+            "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
           },
           "hl": {
             "type": "string",
             "minLength": 1,
             "maxLength": 35,
             "pattern": "^[A-Za-z0-9-]+$",
-            "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+            "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
           },
           "location": {
             "type": "string",
@@ -292,14 +292,14 @@
             "minLength": 2,
             "maxLength": 2,
             "pattern": "^[A-Za-z]{2}$",
-            "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+            "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
           },
           "hl": {
             "type": "string",
             "minLength": 1,
             "maxLength": 35,
             "pattern": "^[A-Za-z0-9-]+$",
-            "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+            "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
           },
           "location": {
             "type": "string",
@@ -359,14 +359,14 @@
             "minLength": 2,
             "maxLength": 2,
             "pattern": "^[A-Za-z]{2}$",
-            "description": "Country code. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+            "description": "Country code. Set explicitly when needed; omitted values use the search provider’s behavior."
           },
           "hl": {
             "type": "string",
             "minLength": 1,
             "maxLength": 35,
             "pattern": "^[A-Za-z0-9-]+$",
-            "description": "Interface language. Set explicitly when needed; omitted values use the search provider\u2019s behavior."
+            "description": "Interface language. Set explicitly when needed; omitted values use the search provider’s behavior."
           },
           "location": {
             "type": "string",
@@ -720,7 +720,7 @@
                 "uniqueItems": true
               }
             ],
-            "description": "Omit to prefer en-orig and fall back to en, returning one track. A string selects that exact language. An array of 1\u201310 distinct codes returns tracks and per-language errors. The selected caption source applies to every language."
+            "description": "Omit to prefer en-orig and fall back to en, returning one track. A string selects that exact language. An array of 1–10 distinct codes returns tracks and per-language errors. The selected caption source applies to every language."
           },
           "auto": {
             "type": "boolean",
@@ -777,7 +777,7 @@
                 "uniqueItems": true
               }
             ],
-            "description": "Omit to prefer en-orig and fall back to en, returning one track. A string selects that exact language. An array of 1\u201310 distinct codes returns tracks and per-language errors. The selected caption source applies to every language."
+            "description": "Omit to prefer en-orig and fall back to en, returning one track. A string selects that exact language. An array of 1–10 distinct codes returns tracks and per-language errors. The selected caption source applies to every language."
           },
           "auto": {
             "type": "boolean",
@@ -1068,6 +1068,13 @@
               "secret_key": {
                 "type": "string",
                 "maxLength": 4096
+              },
+              "session_token": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 16384,
+                "writeOnly": true,
+                "description": "Optional session token for s3, s3_compatible, oss, cos, bos or tos, with the matching temporary access_key and secret_key issued by that storage provider. The provider must support temporary credentials. Use AWS/BOS/TOS SessionToken, OSS SecurityToken or COS Token. Credentials must remain valid through queueing, download and upload retries. Never display this secret."
               },
               "endpoint_url": {
                 "type": "string",

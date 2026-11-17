@@ -1,6 +1,6 @@
 # FlashData TypeScript 与 JavaScript SDK
 
-转录与字幕的多语言请求需要 1.2.0 或更新版本。
+临时存储凭据（`session_token`）需要 1.3.0 或更新版本。转录与字幕的多语言请求需要 1.2.0 或更新版本。
 
 [English](https://github.com/flashdatadev/flashdata-typescript/blob/main/README.md) | [简体中文](https://github.com/flashdatadev/flashdata-typescript/blob/main/README.zh-CN.md)
 

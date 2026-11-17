@@ -7,11 +7,11 @@
 Use Node.js 22 or newer:
 
 ```sh
-npm install @flashdata-dev/sdk@^1.2.0
+npm install @flashdata-dev/sdk@^1.3.0
 ```
 
-Version 1.2.0 adds multiple subtitle languages and per-language results. See the
-[release notes](release-notes-1.2.0.md).
+Version 1.3.0 adds temporary cloud storage credentials (`session_token`). See the
+[release notes](release-notes-1.3.0.md).
 
 ## Install from source
 
@@ -24,7 +24,7 @@ node examples/offline.mjs
 ```
 
 Create a local npm archive with `npm pack`, then install that file in another application
-with `npm install /absolute/path/to/flashdata-dev-sdk-1.2.0.tgz`. No registry release is
+with `npm install /absolute/path/to/flashdata-dev-sdk-1.3.0.tgz`. No registry release is
 required for this workflow. Examples import `@flashdata-dev/sdk`; after a build, that
 same package import works from inside this checkout through Node's package self-reference.
 

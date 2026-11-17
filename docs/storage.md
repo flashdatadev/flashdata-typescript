@@ -36,6 +36,40 @@ Example private S3 configuration; replace placeholders in a protected file:
 }
 ```
 
+## Temporary STS credentials
+
+S3, S3-compatible providers that issue temporary credentials, OSS, COS, BOS and TOS
+accept `session_token` with its matching temporary `access_key` and `secret_key`.
+AWS/BOS/TOS use SessionToken, OSS uses SecurityToken, and COS uses Token with
+TmpSecretId/TmpSecretKey. GCS continues to use `service_account`; Azure uses `sas_token`.
+
+```javascript
+import { FlashData } from '@flashdata-dev/sdk';
+
+const client = new FlashData({ apiKey: 'your-api-key' });
+const storage = {
+  storage_type: 's3',
+  storage_url: 'your-media-bucket',
+  region: 'us-east-1',
+  access_key: 'YOUR_TEMPORARY_ACCESS_KEY',
+  secret_key: 'YOUR_TEMPORARY_SECRET_KEY',
+  session_token: 'YOUR_SESSION_TOKEN',
+};
+const receipt = await client.youtube.download({ video_id: 'dQw4w9WgXcQ', storage });
+console.log(receipt.id);
+```
+
+The same storage object works in `options.storage` for bulk downloads and
+`options.result_storage` for bulk data exports. Omit the token for long-term keys.
+Credentials must remain valid through queueing, processing, uploads and retries;
+FlashData does not refresh them automatically.
+
+For a paused bulk data job whose input scan has finished, renew all three credential
+values using `client.bulk.update(bulkId, { options: { result_storage: {
+access_key: 'NEW_TEMPORARY_ACCESS_KEY', secret_key: 'NEW_TEMPORARY_SECRET_KEY',
+session_token: 'NEW_SESSION_TOKEN' } } })`, then resume. Keep credentials out of
+saved job checkpoints.
+
 Download supports audio/video/audio-only selection, video quality constraints, frame-rate
 constraints, source audio language, audio quality, format selection, a yt-dlp format
 selector, metadata sidecars and start/end timestamps. All parameters are documented in

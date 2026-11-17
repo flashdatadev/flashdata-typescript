@@ -215,6 +215,7 @@ export type AsyncQuery_youtube_download = {
       object_prefix?: string;
       access_key?: string;
       secret_key?: string;
+      session_token?: string;
       endpoint_url?: string;
       region?: string;
       account_name?: string;
@@ -686,6 +687,7 @@ export type Query_youtube_download = {
       object_prefix?: string;
       access_key?: string;
       secret_key?: string;
+      session_token?: string;
       endpoint_url?: string;
       region?: string;
       account_name?: string;
@@ -994,6 +996,7 @@ export type YoutubeDownloadParams = {
     object_prefix?: string;
     access_key?: string;
     secret_key?: string;
+    session_token?: string;
     endpoint_url?: string;
     region?: string;
     account_name?: string;

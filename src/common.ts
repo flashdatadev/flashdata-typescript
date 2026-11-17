@@ -46,6 +46,7 @@ const secretKeys = new Set([
   'api_key',
   'access_key',
   'secret_key',
+  'session_token',
   'private_key',
   'sas_token',
   'authorization',

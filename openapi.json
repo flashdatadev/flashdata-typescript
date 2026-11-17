@@ -2631,6 +2631,13 @@
                     "type": "string",
                     "maxLength": 4096
                   },
+                  "session_token": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 16384,
+                    "writeOnly": true,
+                    "description": "Optional session token for s3, s3_compatible, oss, cos, bos or tos, with the matching temporary access_key and secret_key issued by that storage provider. The provider must support temporary credentials. Use AWS/BOS/TOS SessionToken, OSS SecurityToken or COS Token. Credentials must remain valid through queueing, download and upload retries. Never display this secret."
+                  },
                   "endpoint_url": {
                     "type": "string",
                     "maxLength": 4096,

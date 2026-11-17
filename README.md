@@ -1,6 +1,6 @@
 # FlashData TypeScript & JavaScript SDK
 
-Multiple transcript/caption languages require version 1.2.0 or newer.
+Temporary storage credentials (`session_token`) require version 1.3.0 or newer. Multiple transcript/caption languages require version 1.2.0 or newer.
 
 [English](https://github.com/flashdatadev/flashdata-typescript/blob/main/README.md) | [简体中文](https://github.com/flashdatadev/flashdata-typescript/blob/main/README.zh-CN.md)
 
